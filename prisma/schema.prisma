@@ -1,0 +1,134 @@
+// Demoify — GitHub for songs
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Better Auth core tables (email + password). Field names match Better Auth's
+// expected schema; `username`, `displayName`, `avatarUrl` are added via the
+// auth config `user.additionalFields`.
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String   @id
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Demoify custom fields
+  username    String  @unique
+  displayName String
+  avatarUrl   String?
+  // Credits balance. New users start with enough for 3 free uploads (see STARTING_CREDITS).
+  credits     Int     @default(150)
+
+  sessions     Session[]
+  accounts     Account[]
+  projects     SongProject[]
+  transactions CreditTransaction[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("verification")
+}
+
+// ---------------------------------------------------------------------------
+// Demoify domain
+// ---------------------------------------------------------------------------
+
+model SongProject {
+  id          String   @id @default(cuid())
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  slug        String
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+
+  versions SongVersion[]
+
+  // Permanent URL is /[username]/[slug] — slug unique per owner
+  @@unique([ownerId, slug])
+  @@map("song_project")
+}
+
+// Ledger of credit changes — purchases (+) and uploads (-). Source of truth for
+// the balance is User.credits; this table is for history and webhook idempotency.
+model CreditTransaction {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  delta           Int // positive = added, negative = spent
+  reason          String // "upload" | "purchase"
+  stripeSessionId String?  @unique
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+  @@map("credit_transaction")
+}
+
+model SongVersion {
+  id            String      @id @default(cuid())
+  projectId     String
+  project       SongProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  audioUrl      String
+  changelog     String?
+  duration      Float?
+  uploadedAt    DateTime    @default(now())
+
+  @@unique([projectId, versionNumber])
+  @@map("song_version")
+}
