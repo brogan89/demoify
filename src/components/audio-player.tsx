@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Play, Pause } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -15,22 +15,24 @@ export function AudioPlayer({
   src,
   initialDuration,
   onPlay,
+  onEnded,
+  autoPlay = false,
 }: {
   src: string;
   initialDuration?: number | null;
   onPlay?: () => void;
+  onEnded?: () => void;
+  // Start playing automatically when `src` changes — used to advance a playlist.
+  autoPlay?: boolean;
 }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(initialDuration ?? 0);
 
-  // Reset playback state when the source changes (e.g. selecting a version).
-  useEffect(() => {
-    setPlaying(false);
-    setCurrent(0);
-    setDuration(initialDuration ?? 0);
-  }, [src, initialDuration]);
+  // Playback state is driven by the <audio> element's events (below) rather than
+  // an effect: changing `src` fires `loadstart`, which resets the transport, and
+  // the native `autoPlay` attribute handles advancing a playlist to the next track.
 
   function toggle() {
     const a = audioRef.current;
@@ -56,6 +58,13 @@ export function AudioPlayer({
         ref={audioRef}
         src={src}
         preload="metadata"
+        autoPlay={autoPlay}
+        onLoadStart={() => {
+          // New source selected — reset the transport.
+          setPlaying(false);
+          setCurrent(0);
+          setDuration(initialDuration ?? 0);
+        }}
         onPlay={() => {
           setPlaying(true);
           onPlay?.();
@@ -63,7 +72,10 @@ export function AudioPlayer({
         onPause={() => setPlaying(false)}
         onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
         onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-        onEnded={() => setPlaying(false)}
+        onEnded={() => {
+          setPlaying(false);
+          onEnded?.();
+        }}
       />
       <Button
         type="button"

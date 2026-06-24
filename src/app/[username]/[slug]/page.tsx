@@ -7,12 +7,14 @@ import { getMembership, isMember, canManageSongs } from "@/lib/band";
 import { SongView, type VersionDTO } from "@/components/song-view";
 import { type CommentDTO } from "@/components/comments";
 import { ShareLink } from "@/components/share-link";
+import { LikeButton } from "@/components/like-button";
 
 async function getProject(username: string, slug: string) {
   return prisma.songProject.findFirst({
     where: { slug, band: { username } },
     include: {
       band: { select: { id: true, username: true, displayName: true } },
+      _count: { select: { likes: true } },
       versions: { orderBy: { versionNumber: "desc" } },
       comments: {
         orderBy: { createdAt: "desc" },
@@ -85,6 +87,15 @@ export default async function PublicSongPage({
   const canComment = Boolean(currentUserId) && (!isPrivate || isMember(role));
   const canModerate = canManageSongs(role);
 
+  // Likes are public-only. Seed the button with the viewer's current like state.
+  const likedByUser =
+    !isPrivate && currentUser
+      ? (await prisma.like.findUnique({
+          where: { projectId_userId: { projectId: project.id, userId: currentUser.id } },
+          select: { id: true },
+        })) !== null
+      : false;
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <div className="mb-6 flex items-start gap-3">
@@ -105,8 +116,16 @@ export default async function PublicSongPage({
         </div>
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 flex items-center gap-3">
         <ShareLink path={`${project.band.username}/${slug}`} />
+        {!isPrivate && (
+          <LikeButton
+            projectId={project.id}
+            initialLiked={likedByUser}
+            initialCount={project._count.likes}
+            isAuthed={Boolean(currentUser)}
+          />
+        )}
       </div>
 
       <SongView

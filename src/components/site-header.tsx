@@ -22,8 +22,14 @@ export async function SiteHeader() {
         </Link>
         <nav className="flex items-center gap-2">
           <ThemeToggle />
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/explore">Explore</Link>
+          </Button>
           {user && active ? (
             <>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/library">Library</Link>
+              </Button>
               <BandSwitcher
                 bands={bands.map((b) => ({
                   id: b.band.id,

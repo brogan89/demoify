@@ -39,6 +39,7 @@ model User {
   memberships BandMembership[]
   comments    Comment[]
   projects    SongProject[] // songs this user created (SongProject.owner)
+  likes       Like[]
 
   @@map("user")
 }
@@ -145,10 +146,26 @@ model SongProject {
 
   versions SongVersion[]
   comments Comment[]
+  likes    Like[]
 
   // Permanent URL is /[username]/[slug] — slug unique per band
   @@unique([bandId, slug])
   @@map("song_project")
+}
+
+// A user's like on a (public) song. The liked set is the user's /library playlist;
+// like count drives the Explore "Popular" sort.
+model Like {
+  id        String      @id @default(cuid())
+  projectId String
+  project   SongProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+
+  @@unique([projectId, userId])
+  @@index([userId])
+  @@map("song_like")
 }
 
 // Ledger of credit changes — purchases (+) and uploads (-). Source of truth for
