@@ -13,28 +13,46 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      # Surface secrets as env so steps can detect whether deploy is configured.
+      NEON_DIRECT_URL: ${{ secrets.NEON_DIRECT_URL }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v4
 
+      # Until Neon + Cloudflare secrets are set, skip the deploy instead of failing red.
+      - name: Check deploy is configured
+        id: gate
+        run: |
+          if [ -n "$NEON_DIRECT_URL" ] && [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Deploy secrets not set (NEON_DIRECT_URL / CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID). Skipping deploy — see DEPLOYMENT.md."
+          fi
+
       - uses: actions/setup-node@v4
+        if: steps.gate.outputs.ready == 'true'
         with:
           node-version: 22
           cache: npm
 
       - name: Install dependencies
+        if: steps.gate.outputs.ready == 'true'
         run: npm ci
 
       - name: Generate Prisma client
+        if: steps.gate.outputs.ready == 'true'
         run: npx prisma generate
 
       - name: Apply database migrations (Neon direct URL)
+        if: steps.gate.outputs.ready == 'true'
         run: npx prisma migrate deploy
         env:
-          # Neon DIRECT (non-pooled) connection string — migrations bypass Hyperdrive.
+          # Neon DIRECT (non-pooled) connection string — migrations bypass the pooler.
           DATABASE_URL: ${{ secrets.NEON_DIRECT_URL }}
 
       - name: Build & deploy (OpenNext → Cloudflare Workers)
+        if: steps.gate.outputs.ready == 'true'
         run: npm run deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
