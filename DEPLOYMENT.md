@@ -1,14 +1,16 @@
 # Deploying Demoify to Cloudflare
 
-Production runs as a Cloudflare Worker built by [OpenNext](https://opennext.js.org/cloudflare),
-with Postgres on Neon (via the Neon serverless driver), R2 for audio, Resend for email, and
-Stripe for credits. Served from **demoify.app**.
+Everything runs on Cloudflare: a Worker built by [OpenNext](https://opennext.js.org/cloudflare),
+**D1** (SQLite) for the database, R2 for audio, plus Resend for email and Stripe for credits.
+Served from **demoify.app**.
 
-> **Note:** the original plan used Cloudflare Hyperdrive + `node-postgres` (`pg`). That path is
-> currently broken under OpenNext (`pg` pulls `pg-cloudflare`, which fails to bundle — open
-> upstream issue). We use Prisma's **Neon serverless driver** adapter instead: it speaks
-> WebSocket, needs no Hyperdrive, and is the canonical Prisma-on-Workers setup. Same DB provider
-> (Neon); local dev now also uses a Neon branch instead of Docker Postgres.
+> **DB note:** the plan first tried Neon + Hyperdrive (`pg` won't bundle under OpenNext), then the
+> Neon serverless driver. We landed on **Cloudflare D1** so the database lives in the same account
+> as everything else — a `DB` binding, no external connection string, and offline local dev.
+> Prisma 7 needs the generator's `runtime = "workerd"` target to run on Workers (otherwise it
+> compiles WASM at runtime, which Workers block). The D1 database (`demoify`,
+> id `528fd335-23b4-4922-9e44-c83e94d50bd9`) is created and migrated (local + remote); signup was
+> verified writing to it via `wrangler dev`.
 
 > **Plan note:** the Worker bundle is ~4.5 MB gzip, over the 3 MB free-tier limit — needs the
 > **Workers Paid** plan (10 MB limit).
@@ -18,20 +20,22 @@ placeholders. Do them roughly in order.
 
 ---
 
-## 1. Database — Neon
+## 1. Database — Cloudflare D1 (already set up)
 
-1. Create a project at <https://neon.tech>. Grab two connection strings:
-   - **Pooled** (host contains `-pooler`) → the app's `DATABASE_URL` secret (the Neon
-     serverless driver uses this).
-   - **Direct** (no `-pooler`) → for running migrations.
-2. Run the first migration against Neon (direct URL):
-   ```
-   DATABASE_URL="<NEON_DIRECT_URL>" npx prisma migrate deploy
-   ```
-3. `DATABASE_URL` (pooled) is set as a Worker secret in step 6 — there's no Hyperdrive binding.
+The D1 database `demoify` is created and bound as `DB` in `wrangler.jsonc`, and the schema
+migration (`migrations/0001_init.sql`) is applied to both local and remote. Nothing to do for a
+normal deploy. Reference for future schema changes:
 
-   For **local dev**, point `.env`'s `DATABASE_URL` at a Neon branch (e.g. a `dev` branch) too;
-   the serverless driver can't talk to a plain local Postgres.
+- **Edit schema** → `prisma/schema.prisma`, then `npx prisma generate`.
+- **Create migration SQL:**
+  ```
+  npx wrangler d1 migrations create demoify <name>
+  npx prisma migrate diff --from-local-d1 --to-schema prisma/schema.prisma --script > migrations/<file>.sql
+  ```
+- **Apply:** `npx wrangler d1 migrations apply demoify --local` (dev) and `--remote` (prod, also
+  done automatically by CI).
+
+Local dev uses an emulated D1 (in `.wrangler/`), so it's fully **offline** — no external DB.
 
 ## 2. Domain — demoify.app
 
@@ -76,7 +80,6 @@ Set each as a Worker secret (one prompt per command), or in the dashboard
 (Workers → demoify → Settings → Variables):
 
 ```
-npx wrangler secret put DATABASE_URL            # Neon POOLED connection string
 npx wrangler secret put BETTER_AUTH_SECRET      # openssl rand -hex 32
 npx wrangler secret put STRIPE_SECRET_KEY
 npx wrangler secret put STRIPE_WEBHOOK_SECRET
@@ -91,7 +94,8 @@ npx wrangler secret put GOOGLE_CLIENT_ID
 npx wrangler secret put GOOGLE_CLIENT_SECRET
 ```
 
-`BETTER_AUTH_URL` is a plain var in `wrangler.jsonc` (not a secret).
+`BETTER_AUTH_URL` is a plain var in `wrangler.jsonc` (not a secret). The database needs no
+secret — D1 is a binding.
 
 ## 7. First deploy
 
@@ -102,11 +106,11 @@ npm run deploy        # opennextjs-cloudflare build && deploy
 Or push to `main` and let GitHub Actions do it (see below).
 
 ### GitHub Actions secrets (for CI in `.github/workflows/deploy.yml`)
-- `CLOUDFLARE_API_TOKEN` — use the **"Edit Cloudflare Workers"** token template.
+- `CLOUDFLARE_API_TOKEN` — use the **"Edit Cloudflare Workers"** token template (also needs D1
+  edit permission for the migrations step).
 - `CLOUDFLARE_ACCOUNT_ID` — **already set** (equals your R2 account id).
-- `NEON_DIRECT_URL` — Neon direct connection string (migrations step).
 
-The CI workflow skips (stays green) until all three are present, then deploys automatically.
+The CI workflow skips (stays green) until both are present, then migrates D1 + deploys.
 
 ---
 
@@ -115,12 +119,12 @@ The CI workflow skips (stays green) until all three are present, then deploys au
 ```
 npm run preview       # runs the real Workers runtime locally via OpenNext
 ```
-Both `npm run dev` and `npm run preview` read `DATABASE_URL` from `.env` (point it at a Neon
-branch).
+Both `npm run dev` and `npm run preview` use the **local emulated D1** (no setup, offline). If
+you change the schema, re-run `npx wrangler d1 migrations apply demoify --local` first.
 
 ## Verification checklist
-- [ ] `npm run preview` boots; sign-up works.
-- [ ] `prisma migrate deploy` applied to Neon.
+- [ ] `npm run preview` boots; sign-up works. *(signup → D1 already verified via `wrangler dev`)*
+- [ ] D1 migration applied remotely (`wrangler d1 migrations apply demoify --remote`). *(done)*
 - [ ] Sign up on demoify.app → verification email arrives → verify → log in.
 - [ ] Password reset email arrives and completes.
 - [ ] Upload an MP3 → plays back from `cdn.demoify.app`.

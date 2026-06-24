@@ -30,7 +30,7 @@ export function SignupForm() {
 
     setBusy(true);
     // Username is derived from the band name server-side (see auth create hook).
-    const { error } = await signUp.email({
+    const { data, error } = await signUp.email({
       email,
       password,
       name: bandName,
@@ -42,8 +42,17 @@ export function SignupForm() {
       toast.error(error.message ?? "Could not create account");
       return;
     }
-    toast.success("Account created — check your email to verify");
-    router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+    // When verification is required there's no session yet (token is null) →
+    // send them to verify. Otherwise they're signed in → straight to dashboard.
+    const signedIn = Boolean((data as { token?: string | null } | null)?.token);
+    if (signedIn) {
+      toast.success("Welcome to Demoify");
+      router.push("/dashboard");
+      router.refresh();
+    } else {
+      toast.success("Account created — check your email to verify");
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+    }
   }
 
   return (

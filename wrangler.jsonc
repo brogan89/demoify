@@ -16,12 +16,20 @@
 		"binding": "IMAGES"
 	},
 
-	// Postgres is Neon, reached via the Neon serverless driver (WebSocket) using
-	// the DATABASE_URL secret (Neon POOLED connection string). No Hyperdrive — the
-	// driver is built for Workers. See src/lib/db.ts.
+	// Cloudflare D1 (SQLite) — the app database. Bound as `env.DB` (see src/lib/db.ts).
+	// Create with: npx wrangler d1 create demoify
+	// then paste the printed database_id below (replaces <D1_DATABASE_ID>).
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "demoify",
+			"database_id": "528fd335-23b4-4922-9e44-c83e94d50bd9",
+			"migrations_dir": "migrations"
+		}
+	],
 
-	// Non-secret config. Secrets (DATABASE_URL, BETTER_AUTH_SECRET, STRIPE_*, R2_*,
-	// RESEND_API_KEY) are set via `wrangler secret put` / CI, NOT here.
+	// Non-secret config. Secrets (BETTER_AUTH_SECRET, STRIPE_*, R2_*, RESEND_API_KEY)
+	// are set via `wrangler secret put` / CI, NOT here. No DATABASE_URL — D1 is a binding.
 	"vars": {
 		"BETTER_AUTH_URL": "https://demoify.app"
 	}

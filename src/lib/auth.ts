@@ -2,9 +2,14 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "@/lib/db";
 import { slugify } from "@/lib/slug";
-import { sendEmail, actionEmail } from "@/lib/email";
+import { sendEmail, actionEmail, isEmailConfigured } from "@/lib/email";
 
 const APP_URL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
+
+// Only enforce email verification when we can actually deliver the email.
+// In production Resend is configured → verification required. Locally (no
+// RESEND_API_KEY) it's relaxed so you can sign up and test without a mailbox.
+const EMAIL_VERIFICATION = isEmailConfigured();
 
 /** Slugify a band/display name into a username, unique-ified with a numeric suffix. */
 async function generateUniqueUsername(base: string): Promise<string> {
@@ -37,10 +42,10 @@ if (process.env.APPLE_CLIENT_ID && process.env.APPLE_CLIENT_SECRET) {
 export const auth = betterAuth({
   baseURL: APP_URL,
   trustedOrigins: [APP_URL],
-  database: prismaAdapter(prisma, { provider: "postgresql" }),
+  database: prismaAdapter(prisma, { provider: "sqlite" }),
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: true,
+    requireEmailVerification: EMAIL_VERIFICATION,
     sendResetPassword: async ({ user, url }) => {
       await sendEmail({
         to: user.email,
@@ -55,7 +60,7 @@ export const auth = betterAuth({
     },
   },
   emailVerification: {
-    sendOnSignUp: true,
+    sendOnSignUp: EMAIL_VERIFICATION,
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
       await sendEmail({

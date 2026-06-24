@@ -26,51 +26,66 @@ export async function createVersion(input: CreateVersionInput) {
     return { error: "Project not found" };
   }
 
-  try {
-    // One transaction: verify balance, create the version, charge credits, log it.
-    // The (projectId, versionNumber) unique constraint guards concurrent inserts;
-    // the conditional credit decrement guards concurrent double-spends.
-    const version = await prisma.$transaction(async (tx) => {
-      const charged = await tx.user.updateMany({
-        where: { id: user.id, credits: { gte: UPLOAD_COST } },
-        data: { credits: { decrement: UPLOAD_COST } },
-      });
-      if (charged.count === 0) throw new Error(INSUFFICIENT_CREDITS);
+  // D1 (SQLite) has no interactive transactions, so we can't read-then-write in one
+  // atomic block. Instead: charge atomically up front (conditional decrement), then
+  // write the version + ledger in one batch, refunding the charge if that write fails.
 
-      const last = await tx.songVersion.findFirst({
+  // 1. Charge credits — atomic and conditional; guards double-spend on its own.
+  const charged = await prisma.user.updateMany({
+    where: { id: user.id, credits: { gte: UPLOAD_COST } },
+    data: { credits: { decrement: UPLOAD_COST } },
+  });
+  if (charged.count === 0) {
+    return {
+      error: `Not enough credits. Each upload costs ${UPLOAD_COST} credits.`,
+      code: INSUFFICIENT_CREDITS,
+    };
+  }
+
+  try {
+    // 2. Assign the next version number and write. The (projectId, versionNumber)
+    // unique constraint guards concurrent inserts — on collision, retry with a
+    // freshly-read number. Version row + ledger row commit together in one batch.
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const last = await prisma.songVersion.findFirst({
         where: { projectId: project.id },
         orderBy: { versionNumber: "desc" },
         select: { versionNumber: true },
       });
       const versionNumber = (last?.versionNumber ?? 0) + 1;
 
-      const created = await tx.songVersion.create({
-        data: {
-          projectId: project.id,
-          versionNumber,
-          audioUrl: input.audioUrl,
-          changelog: input.changelog?.trim() || null,
-          duration: input.duration ?? null,
-        },
-      });
+      try {
+        const [version] = await prisma.$transaction([
+          prisma.songVersion.create({
+            data: {
+              projectId: project.id,
+              versionNumber,
+              audioUrl: input.audioUrl,
+              changelog: input.changelog?.trim() || null,
+              duration: input.duration ?? null,
+            },
+          }),
+          prisma.creditTransaction.create({
+            data: { userId: user.id, delta: -UPLOAD_COST, reason: "upload" },
+          }),
+        ]);
 
-      await tx.creditTransaction.create({
-        data: { userId: user.id, delta: -UPLOAD_COST, reason: "upload" },
-      });
-
-      return created;
-    });
-
-    revalidatePath(`/dashboard/${project.id}`);
-    revalidatePath(`/${project.owner.username}/${project.slug}`);
-    return { version };
-  } catch (err) {
-    if (err instanceof Error && err.message === INSUFFICIENT_CREDITS) {
-      return {
-        error: `Not enough credits. Each upload costs ${UPLOAD_COST} credits.`,
-        code: INSUFFICIENT_CREDITS,
-      };
+        revalidatePath(`/dashboard/${project.id}`);
+        revalidatePath(`/${project.owner.username}/${project.slug}`);
+        return { version };
+      } catch (err) {
+        // Unique collision on (projectId, versionNumber) → another upload raced us; retry.
+        if ((err as { code?: string }).code === "P2002") continue;
+        throw err;
+      }
     }
+    throw new Error("Could not assign a version number after several attempts");
+  } catch (err) {
+    // 3. The write failed after we charged — refund so credits aren't lost.
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { credits: { increment: UPLOAD_COST } },
+    });
     throw err;
   }
 }
