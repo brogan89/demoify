@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Demoify
 
-## Getting Started
+GitHub for songs — share versioned demos, gate uploads behind credits, and let
+bands collaborate. Built with [Next.js](https://nextjs.org), Prisma, Better
+Auth, Cloudflare R2, and Stripe.
 
-First, run the development server:
+## Dev setup
+
+### Prerequisites
+
+- **Node.js 20+**
+- **A Postgres database** — local (`postgres`/Docker) or a hosted instance.
+- **[just](https://github.com/casey/just)** (optional) — task runner for the
+  recipes below. Install with `brew install just`.
+
+### Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+just setup   # install deps, create .env, generate Prisma client, run migrations
+just run     # start the dev server at http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+If you don't use `just`, run the equivalent steps manually:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+cp .env.example .env          # then fill in the values below
+npx prisma generate
+npx prisma migrate dev
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open [http://localhost:3000](http://localhost:3000).
 
-## Learn More
+### Environment variables
 
-To learn more about Next.js, take a look at the following resources:
+Copy `.env.example` to `.env` and fill it in. Only the first group is required;
+the rest enable optional features and stay dormant until configured.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `DATABASE_URL` | ✅ | Postgres connection string. |
+| `BETTER_AUTH_SECRET` | ✅ | Auth signing secret — `openssl rand -base64 32`. |
+| `BETTER_AUTH_URL` | ✅ | Base URL for auth callbacks (`http://localhost:3000`). |
+| `NEXT_PUBLIC_APP_URL` | ✅ | Public app URL exposed to the browser. |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | — | Enables Google login. |
+| `APPLE_CLIENT_ID` / `APPLE_CLIENT_SECRET` | — | Enables Apple login. |
+| `R2_*` (5 vars) | — | Cloudflare R2 — enables song uploads. |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | — | Stripe — enables credit purchases. |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The app runs without the optional groups: social buttons, uploads, and
+purchases simply stay disabled until their credentials are present.
 
-## Deploy on Vercel
+### Common tasks
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Command | What it does |
+| --- | --- |
+| `just run` | Start the dev server. |
+| `just migrate` | Create/apply a migration (`npx prisma migrate dev`). |
+| `just generate` | Regenerate the Prisma client. |
+| `just studio` | Open Prisma Studio to inspect the database. |
+| `just reset` | Drop and recreate the database (destructive). |
+| `just build` | Production build. |
+| `just lint` | Run ESLint. |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Run `just` with no arguments to list every recipe.
+
+## Learn more
+
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Prisma Documentation](https://www.prisma.io/docs)
+- [Better Auth Documentation](https://www.better-auth.com/docs)
