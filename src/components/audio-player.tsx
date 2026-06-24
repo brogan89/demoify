@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Play, Pause } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Waveform } from "@/components/waveform";
 
 function fmt(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
@@ -44,10 +45,9 @@ export function AudioPlayer({
     }
   }
 
-  function seek(e: React.ChangeEvent<HTMLInputElement>) {
+  function seekTo(t: number) {
     const a = audioRef.current;
     if (!a) return;
-    const t = Number(e.target.value);
     a.currentTime = t;
     setCurrent(t);
   }
@@ -89,16 +89,27 @@ export function AudioPlayer({
       <span className="w-12 text-right text-xs tabular-nums text-muted-foreground">
         {fmt(current)}
       </span>
-      <input
-        type="range"
-        min={0}
-        max={duration || 0}
-        step={0.1}
-        value={Math.min(current, duration || 0)}
-        onChange={seek}
-        className="h-1.5 flex-1 cursor-pointer accent-primary"
-        aria-label="Seek"
-      />
+      <div className="flex-1">
+        <Waveform
+          key={src}
+          src={src}
+          currentTime={current}
+          duration={duration}
+          onSeek={seekTo}
+          fallback={
+            <input
+              type="range"
+              min={0}
+              max={duration || 0}
+              step={0.1}
+              value={Math.min(current, duration || 0)}
+              onChange={(e) => seekTo(Number(e.target.value))}
+              className="h-1.5 w-full cursor-pointer accent-primary"
+              aria-label="Seek"
+            />
+          }
+        />
+      </div>
       <span className="w-12 text-xs tabular-nums text-muted-foreground">
         {fmt(duration)}
       </span>

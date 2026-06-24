@@ -16,8 +16,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Demoify — GitHub for songs",
-  description: "Share works-in-progress. One permanent link, every version, full history.",
+  title: "Demoify — Share music, get feedback",
+  description:
+    "The simple way for artists and producers to share tracks with one link and collect feedback in the comments.",
 };
 
 export default function RootLayout({

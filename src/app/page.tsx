@@ -1,13 +1,7 @@
 import Link from "next/link";
-import { Disc3, GitBranch, History, Share2 } from "lucide-react";
+import { Disc3, History, Link2, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-const SAMPLE = [
-  { v: 4, note: "Mastered version" },
-  { v: 3, note: "New vocal take" },
-  { v: 2, note: "Added drums" },
-  { v: 1, note: "Initial demo" },
-];
+import { WaveformBars } from "@/components/waveform";
 
 export default function Home() {
   return (
@@ -15,14 +9,21 @@ export default function Home() {
       <section className="grid items-center gap-10 py-16 md:grid-cols-2 md:py-24">
         <div className="space-y-6">
           <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs text-muted-foreground">
-            <GitBranch className="size-3.5" /> Version control for music
+            <Disc3 className="size-3.5" /> Share music. Get feedback.
           </span>
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-            GitHub for songs.
+            Share your music with one link.
           </h1>
           <p className="max-w-prose text-lg text-muted-foreground">
-            Share works-in-progress, not finished tracks. One permanent link that always plays
-            the latest version — with every revision preserved.
+            Demoify is the simple way for artists to share tracks, publicly or privately, and update the track with a new version but keep the same link.
+            <br></br>
+            <br></br>
+            <b><h1>For Artists</h1></b>
+            Bands can share demos and get feedback from other band members.
+            <br></br>
+            <br></br>
+            <b><h1>For Producers</h1></b>
+            Producers can drop mixes and masters and collect feedback right in the comments
           </p>
           <div className="flex gap-3">
             <Button asChild size="lg">
@@ -44,41 +45,38 @@ export default function Home() {
               </p>
             </div>
           </div>
-          <ol className="space-y-0 border-l pl-4">
-            {SAMPLE.map((s, i) => (
-              <li key={s.v} className="relative pb-4 last:pb-0">
-                <span
-                  className={`absolute -left-[1.15rem] top-1.5 size-2 rounded-full ring-4 ring-card ${
-                    i === 0 ? "bg-primary" : "bg-muted-foreground/40"
-                  }`}
-                />
-                <p className="text-sm font-medium">
-                  v{s.v}
-                  {i === 0 && <span className="ml-1 text-xs text-primary">latest</span>}
-                </p>
-                <p className="text-xs text-muted-foreground">{s.note}</p>
-              </li>
-            ))}
-          </ol>
+          <div className="rounded-lg border bg-background p-3">
+            <WaveformBars playedBars={58} />
+            <div className="mt-2 flex justify-between font-mono text-xs text-muted-foreground">
+              <span>1:12</span>
+              <span>3:24</span>
+            </div>
+          </div>
+          <div className="mt-4 flex items-start gap-2 rounded-lg border p-3">
+            <MessageSquare className="mt-0.5 size-4 text-primary" />
+            <p className="text-sm text-muted-foreground">
+              &ldquo;Love the new mix — vocals sit so much better now.&rdquo;
+            </p>
+          </div>
         </div>
       </section>
 
       <section className="grid gap-6 pb-20 sm:grid-cols-3">
         {[
           {
+            icon: Link2,
+            title: "One link to share",
+            body: "Send a single link to anyone. They press play — no app, no account needed.",
+          },
+          {
+            icon: MessageSquare,
+            title: "Feedback in the comments",
+            body: "Listeners and collaborators leave notes right under the track.",
+          },
+          {
             icon: History,
-            title: "Full version history",
-            body: "Every upload becomes a new version. Nothing is ever lost.",
-          },
-          {
-            icon: Share2,
-            title: "One permanent link",
-            body: "Share once. The same URL always serves your newest take.",
-          },
-          {
-            icon: GitBranch,
-            title: "Built to evolve",
-            body: "Songs are works-in-progress, not finished products.",
+            title: "Every version kept",
+            body: "Upload a new take and the same link serves it — old versions stay safe.",
           },
         ].map((f) => (
           <div key={f.title} className="rounded-lg border p-5">
