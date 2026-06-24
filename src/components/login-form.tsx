@@ -15,14 +15,20 @@ export function LoginForm() {
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
+    const email = String(form.get("email"));
     setBusy(true);
     const { error } = await signIn.email({
-      email: String(form.get("email")),
+      email,
       password: String(form.get("password")),
     });
     setBusy(false);
 
     if (error) {
+      if (error.code === "EMAIL_NOT_VERIFIED") {
+        toast.error("Verify your email first — we just sent a new link");
+        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+        return;
+      }
       toast.error(error.message ?? "Invalid email or password");
       return;
     }

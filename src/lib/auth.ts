@@ -2,6 +2,9 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "@/lib/db";
 import { slugify } from "@/lib/slug";
+import { sendEmail, actionEmail } from "@/lib/email";
+
+const APP_URL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
 
 /** Slugify a band/display name into a username, unique-ified with a numeric suffix. */
 async function generateUniqueUsername(base: string): Promise<string> {
@@ -32,10 +35,40 @@ if (process.env.APPLE_CLIENT_ID && process.env.APPLE_CLIENT_SECRET) {
 }
 
 export const auth = betterAuth({
+  baseURL: APP_URL,
+  trustedOrigins: [APP_URL],
   database: prismaAdapter(prisma, { provider: "postgresql" }),
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: false,
+    requireEmailVerification: true,
+    sendResetPassword: async ({ user, url }) => {
+      await sendEmail({
+        to: user.email,
+        subject: "Reset your Demoify password",
+        html: actionEmail({
+          heading: "Reset your password",
+          body: "Click below to choose a new password. This link expires shortly.",
+          url,
+          cta: "Reset password",
+        }),
+      });
+    },
+  },
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, url }) => {
+      await sendEmail({
+        to: user.email,
+        subject: "Verify your Demoify email",
+        html: actionEmail({
+          heading: "Verify your email",
+          body: "Confirm your address to start sharing songs on Demoify.",
+          url,
+          cta: "Verify email",
+        }),
+      });
+    },
   },
   socialProviders,
   user: {

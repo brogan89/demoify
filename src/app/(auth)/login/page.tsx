@@ -25,13 +25,19 @@ export default function LoginPage() {
           <SocialAuthButtons providers={providers} />
           <LoginForm />
         </CardContent>
-        <CardFooter className="mt-2">
+        <CardFooter className="mt-2 flex-col gap-2">
           <p className="w-full text-center text-sm text-muted-foreground">
             No account?{" "}
             <Link href="/signup" className="text-primary underline-offset-4 hover:underline">
               Sign up
             </Link>
           </p>
+          <Link
+            href="/forgot-password"
+            className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+          >
+            Forgot your password?
+          </Link>
         </CardFooter>
       </Card>
     </div>

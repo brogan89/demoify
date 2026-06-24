@@ -42,9 +42,8 @@ export function SignupForm() {
       toast.error(error.message ?? "Could not create account");
       return;
     }
-    toast.success("Welcome to Demoify");
-    router.push("/dashboard");
-    router.refresh();
+    toast.success("Account created — check your email to verify");
+    router.push(`/verify-email?email=${encodeURIComponent(email)}`);
   }
 
   return (
