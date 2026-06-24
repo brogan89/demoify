@@ -20,16 +20,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Until the Cloudflare secrets are set, skip the deploy instead of failing red.
+      # Deploy secrets are mandatory. Fail loud if missing — a silently skipped
+      # deploy looks green but leaves production stale (or, with a proxied DNS
+      # record and no worker, hanging). See DEPLOYMENT.md.
       - name: Check deploy is configured
         id: gate
         run: |
-          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Deploy secrets not set (CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID). Skipping deploy — see DEPLOYMENT.md."
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Deploy secrets not set (CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID). Set them in repo settings — see DEPLOYMENT.md."
+            exit 1
           fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@v4
         if: steps.gate.outputs.ready == 'true'
