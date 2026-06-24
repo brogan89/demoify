@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Coins, Disc3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useSession, signOut } from "@/lib/auth-client";
 
 export function SiteHeader() {
@@ -24,6 +25,7 @@ export function SiteHeader() {
           Demoify
         </Link>
         <nav className="flex items-center gap-2">
+          <ThemeToggle />
           {isPending ? null : session ? (
             <>
               <Link
