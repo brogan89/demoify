@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
+import { getMembership, canManageSongs } from "@/lib/band";
 import { UPLOAD_COST } from "@/lib/credits";
 
 const INSUFFICIENT_CREDITS = "INSUFFICIENT_CREDITS";
@@ -20,19 +21,20 @@ export async function createVersion(input: CreateVersionInput) {
 
   const project = await prisma.songProject.findUnique({
     where: { id: input.projectId },
-    include: { owner: { select: { username: true } } },
+    include: { band: { select: { username: true } } },
   });
-  if (!project || project.ownerId !== user.id) {
-    return { error: "Project not found" };
-  }
+  if (!project) return { error: "Project not found" };
+
+  const role = await getMembership(project.bandId, user.id);
+  if (!canManageSongs(role)) return { error: "Not allowed" };
 
   // D1 (SQLite) has no interactive transactions, so we can't read-then-write in one
   // atomic block. Instead: charge atomically up front (conditional decrement), then
   // write the version + ledger in one batch, refunding the charge if that write fails.
 
-  // 1. Charge credits — atomic and conditional; guards double-spend on its own.
-  const charged = await prisma.user.updateMany({
-    where: { id: user.id, credits: { gte: UPLOAD_COST } },
+  // 1. Charge the band's credits — atomic and conditional; guards double-spend.
+  const charged = await prisma.band.updateMany({
+    where: { id: project.bandId, credits: { gte: UPLOAD_COST } },
     data: { credits: { decrement: UPLOAD_COST } },
   });
   if (charged.count === 0) {
@@ -66,12 +68,12 @@ export async function createVersion(input: CreateVersionInput) {
             },
           }),
           prisma.creditTransaction.create({
-            data: { userId: user.id, delta: -UPLOAD_COST, reason: "upload" },
+            data: { bandId: project.bandId, delta: -UPLOAD_COST, reason: "upload" },
           }),
         ]);
 
         revalidatePath(`/dashboard/${project.id}`);
-        revalidatePath(`/${project.owner.username}/${project.slug}`);
+        revalidatePath(`/${project.band.username}/${project.slug}`);
         return { version };
       } catch (err) {
         // Unique collision on (projectId, versionNumber) → another upload raced us; retry.
@@ -82,8 +84,8 @@ export async function createVersion(input: CreateVersionInput) {
     throw new Error("Could not assign a version number after several attempts");
   } catch (err) {
     // 3. The write failed after we charged — refund so credits aren't lost.
-    await prisma.user.update({
-      where: { id: user.id },
+    await prisma.band.update({
+      where: { id: project.bandId },
       data: { credits: { increment: UPLOAD_COST } },
     });
     throw err;

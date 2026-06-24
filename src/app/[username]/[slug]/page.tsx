@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Disc3 } from "lucide-react";
+import { Disc3, Lock } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
+import { getMembership, isMember, canManageSongs } from "@/lib/band";
 import { SongView, type VersionDTO } from "@/components/song-view";
 import { type CommentDTO } from "@/components/comments";
 import { ShareLink } from "@/components/share-link";
 
 async function getProject(username: string, slug: string) {
   return prisma.songProject.findFirst({
-    where: { slug, owner: { username } },
+    where: { slug, band: { username } },
     include: {
-      owner: { select: { username: true, displayName: true } },
+      band: { select: { id: true, username: true, displayName: true } },
       versions: { orderBy: { versionNumber: "desc" } },
       comments: {
         orderBy: { createdAt: "desc" },
@@ -31,8 +32,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { username, slug } = await params;
   const project = await getProject(username, slug);
-  if (!project) return { title: "Not found — Demoify" };
-  const title = `${project.title} — ${project.owner.displayName}`;
+  if (!project || project.visibility === "PRIVATE") {
+    return { title: "Not found — Demoify" };
+  }
+  const title = `${project.title} — ${project.band.displayName}`;
   return {
     title: `${title} · Demoify`,
     description: project.description ?? `Listen to ${project.title} on Demoify.`,
@@ -51,6 +54,13 @@ export default async function PublicSongPage({
     getCurrentUser(),
   ]);
   if (!project) notFound();
+
+  const currentUserId = currentUser?.id ?? null;
+  const role = currentUser ? await getMembership(project.bandId, currentUser.id) : null;
+  const isPrivate = project.visibility === "PRIVATE";
+
+  // Private songs are only visible to band members.
+  if (isPrivate && !isMember(role)) notFound();
 
   const versions: VersionDTO[] = project.versions.map((v) => ({
     id: v.id,
@@ -71,16 +81,22 @@ export default async function PublicSongPage({
     authorAvatarUrl: c.author.avatarUrl,
   }));
 
-  const currentUserId = currentUser?.id ?? null;
-  const isOwner = currentUserId === project.ownerId;
+  // Public songs: any logged-in user can comment. Private: members only (already gated).
+  const canComment = Boolean(currentUserId) && (!isPrivate || isMember(role));
+  const canModerate = canManageSongs(role);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <div className="mb-6 flex items-start gap-3">
         <Disc3 className="mt-1 size-7 text-primary" />
         <div>
-          <h1 className="text-2xl font-semibold">{project.title}</h1>
-          <p className="text-sm text-muted-foreground">by {project.owner.displayName}</p>
+          <h1 className="flex items-center gap-2 text-2xl font-semibold">
+            {project.title}
+            {isPrivate && (
+              <Lock className="size-4 text-muted-foreground" aria-label="Private" />
+            )}
+          </h1>
+          <p className="text-sm text-muted-foreground">by {project.band.displayName}</p>
           {project.description && (
             <p className="mt-2 max-w-prose text-sm text-muted-foreground">
               {project.description}
@@ -90,7 +106,7 @@ export default async function PublicSongPage({
       </div>
 
       <div className="mb-6">
-        <ShareLink path={`${username}/${slug}`} />
+        <ShareLink path={`${project.band.username}/${slug}`} />
       </div>
 
       <SongView
@@ -99,7 +115,8 @@ export default async function PublicSongPage({
         playCount={project.playCount}
         comments={comments}
         currentUserId={currentUserId}
-        isOwner={isOwner}
+        canComment={canComment}
+        canModerate={canModerate}
       />
     </div>
   );

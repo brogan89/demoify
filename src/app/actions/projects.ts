@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
+import { getActiveBand, getMembership, canManageSongs } from "@/lib/band";
 import { isR2Configured, r2, R2_BUCKET } from "@/lib/r2";
 import { slugify, uniqueSlug } from "@/lib/slug";
 
@@ -12,18 +13,22 @@ export async function createProject(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
+  const active = await getActiveBand();
+  // Only ADMIN/MANAGER may add songs; members get no create form, but guard anyway.
+  if (!active || !canManageSongs(active.role)) redirect("/dashboard");
+
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim() || null;
   if (!title) return;
 
   const existing = await prisma.songProject.findMany({
-    where: { ownerId: user.id },
+    where: { bandId: active.band.id },
     select: { slug: true },
   });
   const slug = uniqueSlug(slugify(title), new Set(existing.map((p) => p.slug)));
 
   const project = await prisma.songProject.create({
-    data: { ownerId: user.id, title, description, slug },
+    data: { bandId: active.band.id, ownerId: user.id, title, description, slug },
   });
 
   revalidatePath("/dashboard");
@@ -36,11 +41,12 @@ export async function deleteProject(projectId: string) {
 
   const project = await prisma.songProject.findUnique({
     where: { id: projectId },
-    include: { owner: { select: { username: true } } },
+    include: { band: { select: { username: true } } },
   });
-  if (!project || project.ownerId !== user.id) {
-    return { error: "Song not found" };
-  }
+  if (!project) return { error: "Song not found" };
+
+  const role = await getMembership(project.bandId, user.id);
+  if (!canManageSongs(role)) return { error: "Not allowed" };
 
   // Best-effort cleanup of the song's audio files in R2. All keys for a project
   // share the `songs/<projectId>/` prefix (see the presign route). Failures here
@@ -65,19 +71,46 @@ export async function deleteProject(projectId: string) {
   await prisma.songProject.delete({ where: { id: projectId } });
 
   revalidatePath("/dashboard");
-  revalidatePath(`/${project.owner.username}/${project.slug}`);
+  revalidatePath(`/${project.band.username}/${project.slug}`);
   return { ok: true };
 }
 
-export async function listMyProjects() {
-  const user = await getCurrentUser();
-  if (!user) return [];
+/** Songs owned by the band the user is currently acting as. */
+export async function listBandProjects() {
+  const active = await getActiveBand();
+  if (!active) return [];
   return prisma.songProject.findMany({
-    where: { ownerId: user.id },
+    where: { bandId: active.band.id },
     orderBy: { createdAt: "desc" },
     include: {
       versions: { orderBy: { versionNumber: "desc" }, take: 1 },
       _count: { select: { versions: true } },
     },
   });
+}
+
+export async function setSongVisibility(
+  projectId: string,
+  visibility: "PUBLIC" | "PRIVATE",
+) {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Unauthorized" };
+  if (visibility !== "PUBLIC" && visibility !== "PRIVATE") {
+    return { error: "Invalid visibility" };
+  }
+
+  const project = await prisma.songProject.findUnique({
+    where: { id: projectId },
+    include: { band: { select: { username: true } } },
+  });
+  if (!project) return { error: "Song not found" };
+
+  const role = await getMembership(project.bandId, user.id);
+  if (!canManageSongs(role)) return { error: "Not allowed" };
+
+  await prisma.songProject.update({ where: { id: projectId }, data: { visibility } });
+
+  revalidatePath(`/dashboard/${projectId}`);
+  revalidatePath(`/${project.band.username}/${project.slug}`);
+  return { ok: true };
 }

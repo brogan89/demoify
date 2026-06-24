@@ -38,14 +38,16 @@ export function Comments({
   selectedVersionNumber,
   comments,
   currentUserId,
-  isOwner,
+  canComment,
+  canModerate,
 }: {
   projectId: string;
   selectedVersionId: string;
   selectedVersionNumber: number;
   comments: CommentDTO[];
   currentUserId: string | null;
-  isOwner: boolean;
+  canComment: boolean;
+  canModerate: boolean;
 }) {
   const router = useRouter();
   const [body, setBody] = useState("");
@@ -86,7 +88,7 @@ export function Comments({
         Comments{comments.length > 0 && ` (${comments.length})`}
       </h3>
 
-      {currentUserId ? (
+      {currentUserId && canComment ? (
         <div className="mb-6 space-y-2">
           <Textarea
             value={body}
@@ -114,7 +116,7 @@ export function Comments({
       ) : (
         <ul className="space-y-4">
           {comments.map((c) => {
-            const canDelete = currentUserId === c.authorId || isOwner;
+            const canDelete = currentUserId === c.authorId || canModerate;
             return (
               <li key={c.id} className="flex gap-3">
                 <Avatar size="sm">

@@ -26,23 +26,23 @@ export async function POST(req: Request) {
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
-    const userId = session.metadata?.userId;
+    const bandId = session.metadata?.bandId;
     const credits = Number(session.metadata?.credits ?? 0);
 
-    if (userId && credits > 0 && session.payment_status === "paid") {
+    if (bandId && credits > 0 && session.payment_status === "paid") {
       // Idempotent: the unique stripeSessionId means a replayed event is a no-op.
       try {
         await prisma.$transaction([
           prisma.creditTransaction.create({
             data: {
-              userId,
+              bandId,
               delta: credits,
               reason: "purchase",
               stripeSessionId: session.id,
             },
           }),
-          prisma.user.update({
-            where: { id: userId },
+          prisma.band.update({
+            where: { id: bandId },
             data: { credits: { increment: credits } },
           }),
         ]);

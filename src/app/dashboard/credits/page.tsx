@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { Coins } from "lucide-react";
-import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
+import { getActiveBand } from "@/lib/band";
 import { isStripeConfigured } from "@/lib/stripe";
 import { CREDIT_PACKAGES, UPLOAD_COST, uploadsRemaining } from "@/lib/credits";
 import { BuyCredits } from "@/components/buy-credits";
@@ -10,11 +10,9 @@ export default async function CreditsPage() {
   const sessionUser = await getCurrentUser();
   if (!sessionUser) redirect("/login");
 
-  const user = await prisma.user.findUnique({
-    where: { id: sessionUser.id },
-    select: { credits: true },
-  });
-  const credits = user?.credits ?? 0;
+  const active = await getActiveBand();
+  if (!active) redirect("/dashboard");
+  const credits = active.band.credits;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
@@ -23,8 +21,9 @@ export default async function CreditsPage() {
         <div>
           <p className="text-2xl font-semibold">{credits} credits</p>
           <p className="text-sm text-muted-foreground">
-            ≈ {uploadsRemaining(credits)} upload{uploadsRemaining(credits) === 1 ? "" : "s"} left
-            · each upload costs {UPLOAD_COST} credits
+            {active.band.displayName} · ≈ {uploadsRemaining(credits)} upload
+            {uploadsRemaining(credits) === 1 ? "" : "s"} left · each upload costs{" "}
+            {UPLOAD_COST} credits
           </p>
         </div>
       </div>

@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "@/lib/db";
 import { slugify } from "@/lib/slug";
+import { STARTING_CREDITS } from "@/lib/credits";
 import { sendEmail, actionEmail, isEmailConfigured } from "@/lib/email";
 
 const APP_URL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
@@ -11,13 +12,24 @@ const APP_URL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
 // RESEND_API_KEY) it's relaxed so you can sign up and test without a mailbox.
 const EMAIL_VERIFICATION = isEmailConfigured();
 
-/** Slugify a band/display name into a username, unique-ified with a numeric suffix. */
-async function generateUniqueUsername(base: string): Promise<string> {
+/** Slugify a name into a unique `user.username`, suffixed with -2, -3, … on clashes. */
+async function uniqueUserUsername(base: string): Promise<string> {
   const root = slugify(base) || "band";
   let candidate = root;
   let n = 1;
-  // band-name, band-name-2, band-name-3, ...
   while (await prisma.user.findUnique({ where: { username: candidate }, select: { id: true } })) {
+    n += 1;
+    candidate = `${root}-${n}`;
+  }
+  return candidate;
+}
+
+/** Same, but for the band's public URL handle (`band.username`). */
+async function uniqueBandUsername(base: string): Promise<string> {
+  const root = slugify(base) || "band";
+  let candidate = root;
+  let n = 1;
+  while (await prisma.band.findUnique({ where: { username: candidate }, select: { id: true } })) {
     n += 1;
     candidate = `${root}-${n}`;
   }
@@ -82,8 +94,6 @@ export const auth = betterAuth({
       username: { type: "string", required: false, input: false },
       displayName: { type: "string", required: false, input: true },
       avatarUrl: { type: "string", required: false, input: true },
-      // Server-managed credit balance; surfaced on the session for UI display.
-      credits: { type: "number", required: false, input: false },
     },
   },
   databaseHooks: {
@@ -101,9 +111,29 @@ export const auth = betterAuth({
               ...u,
               displayName,
               avatarUrl: u.avatarUrl ?? u.image ?? null,
-              username: await generateUniqueUsername(displayName),
+              username: await uniqueUserUsername(displayName),
             },
           };
+        },
+        // After the account exists, give it a band: the signup's band name
+        // becomes the band's identity, and the new user is its ADMIN.
+        after: async (user) => {
+          const u = user as typeof user & {
+            displayName?: string;
+            avatarUrl?: string | null;
+          };
+          const name = u.displayName || u.name || "Band Name";
+          const band = await prisma.band.create({
+            data: {
+              username: await uniqueBandUsername(name),
+              displayName: name,
+              avatarUrl: u.avatarUrl ?? null,
+              credits: STARTING_CREDITS,
+            },
+          });
+          await prisma.bandMembership.create({
+            data: { bandId: band.id, userId: u.id, role: "ADMIN" },
+          });
         },
       },
     },

@@ -37,14 +37,16 @@ export function SongView({
   playCount,
   comments,
   currentUserId,
-  isOwner,
+  canComment,
+  canModerate,
 }: {
   versions: VersionDTO[];
   projectId: string;
   playCount: number;
   comments: CommentDTO[];
   currentUserId: string | null;
-  isOwner: boolean;
+  canComment: boolean;
+  canModerate: boolean;
 }) {
   // versions arrive newest-first; default the player to the latest.
   const [selectedId, setSelectedId] = useState(versions[0]?.id);
@@ -138,7 +140,8 @@ export function SongView({
         selectedVersionNumber={selected.versionNumber}
         comments={comments}
         currentUserId={currentUserId}
-        isOwner={isOwner}
+        canComment={canComment}
+        canModerate={canModerate}
       />
     </div>
   );

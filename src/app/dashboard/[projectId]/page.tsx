@@ -3,11 +3,13 @@ import { notFound, redirect } from "next/navigation";
 import { ExternalLink } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
+import { getMembership, canManageSongs, isMember } from "@/lib/band";
 import { isR2Configured } from "@/lib/r2";
 import { SongView, type VersionDTO } from "@/components/song-view";
 import { type CommentDTO } from "@/components/comments";
 import { UploadVersion } from "@/components/upload-version";
 import { DeleteSongButton } from "@/components/delete-song-button";
+import { VisibilityToggle } from "@/components/visibility-toggle";
 
 export default async function ProjectPage({
   params,
@@ -18,24 +20,26 @@ export default async function ProjectPage({
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const [project, account] = await Promise.all([
-    prisma.songProject.findUnique({
-      where: { id: projectId },
-      include: {
-        owner: { select: { username: true, displayName: true } },
-        versions: { orderBy: { versionNumber: "desc" } },
-        comments: {
-          orderBy: { createdAt: "desc" },
-          include: {
-            author: { select: { id: true, displayName: true, avatarUrl: true } },
-            version: { select: { versionNumber: true } },
-          },
+  const project = await prisma.songProject.findUnique({
+    where: { id: projectId },
+    include: {
+      band: { select: { id: true, username: true, displayName: true, credits: true } },
+      versions: { orderBy: { versionNumber: "desc" } },
+      comments: {
+        orderBy: { createdAt: "desc" },
+        include: {
+          author: { select: { id: true, displayName: true, avatarUrl: true } },
+          version: { select: { versionNumber: true } },
         },
       },
-    }),
-    prisma.user.findUnique({ where: { id: user.id }, select: { credits: true } }),
-  ]);
-  if (!project || project.ownerId !== user.id) notFound();
+    },
+  });
+  if (!project) notFound();
+
+  // Anyone in the band can open the editor; only ADMIN/MANAGER can change things.
+  const role = await getMembership(project.bandId, user.id);
+  if (!isMember(role)) notFound();
+  const canManage = canManageSongs(role);
 
   const versions: VersionDTO[] = project.versions.map((v) => ({
     id: v.id,
@@ -56,21 +60,25 @@ export default async function ProjectPage({
     authorAvatarUrl: c.author.avatarUrl,
   }));
 
-  const publicPath = `/${project.owner.username}/${project.slug}`;
+  const publicPath = `/${project.band.username}/${project.slug}`;
+  const visibility = project.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC";
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <div className="mb-6">
         <div className="flex items-center justify-between gap-4">
           <h1 className="text-2xl font-semibold">{project.title}</h1>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <Link
               href={publicPath}
               className="flex items-center gap-1 text-sm text-primary underline-offset-4 hover:underline"
             >
               View public page <ExternalLink className="size-3.5" />
             </Link>
-            <DeleteSongButton projectId={project.id} />
+            {canManage && (
+              <VisibilityToggle projectId={project.id} visibility={visibility} />
+            )}
+            {canManage && <DeleteSongButton projectId={project.id} />}
           </div>
         </div>
         {project.description && (
@@ -81,14 +89,16 @@ export default async function ProjectPage({
         </p>
       </div>
 
-      <div className="mb-8">
-        <h2 className="mb-3 text-sm font-medium">Upload new version</h2>
-        <UploadVersion
-          projectId={project.id}
-          uploadsEnabled={isR2Configured()}
-          credits={account?.credits ?? 0}
-        />
-      </div>
+      {canManage && (
+        <div className="mb-8">
+          <h2 className="mb-3 text-sm font-medium">Upload new version</h2>
+          <UploadVersion
+            projectId={project.id}
+            uploadsEnabled={isR2Configured()}
+            credits={project.band.credits}
+          />
+        </div>
+      )}
 
       <SongView
         versions={versions}
@@ -96,7 +106,8 @@ export default async function ProjectPage({
         playCount={project.playCount}
         comments={comments}
         currentUserId={user.id}
-        isOwner
+        canComment
+        canModerate={canManage}
       />
     </div>
   );

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Music4 } from "lucide-react";
+import { Lock, Music4 } from "lucide-react";
 import { getCurrentUser } from "@/lib/session";
-import { listMyProjects } from "@/app/actions/projects";
+import { getActiveBand, canManageSongs } from "@/lib/band";
+import { listBandProjects } from "@/app/actions/projects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreateSongForm } from "@/components/create-song-form";
 
@@ -10,16 +11,25 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const projects = await listMyProjects();
+  const active = await getActiveBand();
+  if (!active) redirect("/login");
+
+  const canManage = canManageSongs(active.role);
+  const projects = await listBandProjects();
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
       <div className="grid gap-8 md:grid-cols-[1fr_320px]">
         <section className="space-y-4">
-          <h1 className="text-2xl font-semibold">My songs</h1>
+          <div>
+            <h1 className="text-2xl font-semibold">{active.band.displayName}</h1>
+            <p className="text-sm text-muted-foreground">
+              Songs · you are {active.role.toLowerCase()}
+            </p>
+          </div>
           {projects.length === 0 ? (
             <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-              No songs yet. Create your first one →
+              {canManage ? "No songs yet. Create your first one →" : "No songs yet."}
             </p>
           ) : (
             <ul className="grid gap-3 sm:grid-cols-2">
@@ -33,6 +43,12 @@ export default async function DashboardPage() {
                           <CardTitle className="flex items-center gap-2 text-base">
                             <Music4 className="size-4 text-primary" />
                             {p.title}
+                            {p.visibility === "PRIVATE" && (
+                              <Lock
+                                className="size-3.5 text-muted-foreground"
+                                aria-label="Private"
+                              />
+                            )}
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="text-sm text-muted-foreground">
@@ -49,16 +65,18 @@ export default async function DashboardPage() {
           )}
         </section>
 
-        <aside>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Create a song</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CreateSongForm />
-            </CardContent>
-          </Card>
-        </aside>
+        {canManage && (
+          <aside>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Create a song</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CreateSongForm />
+              </CardContent>
+            </Card>
+          </aside>
+        )}
       </div>
     </div>
   );

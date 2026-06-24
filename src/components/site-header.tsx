@@ -1,21 +1,17 @@
-"use client";
-
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Coins, Disc3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { useSession, signOut } from "@/lib/auth-client";
+import { SignOutButton } from "@/components/sign-out-button";
+import { BandSwitcher } from "@/components/band-switcher";
+import { getCurrentUser } from "@/lib/session";
+import { getMyBands, getActiveBand } from "@/lib/band";
 
-export function SiteHeader() {
-  const router = useRouter();
-  const { data: session, isPending } = useSession();
-
-  async function handleSignOut() {
-    await signOut();
-    router.push("/");
-    router.refresh();
-  }
+export async function SiteHeader() {
+  const user = await getCurrentUser();
+  const [bands, active] = user
+    ? await Promise.all([getMyBands(), getActiveBand()])
+    : [[], null];
 
   return (
     <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
@@ -26,22 +22,28 @@ export function SiteHeader() {
         </Link>
         <nav className="flex items-center gap-2">
           <ThemeToggle />
-          {isPending ? null : session ? (
+          {user && active ? (
             <>
+              <BandSwitcher
+                bands={bands.map((b) => ({
+                  id: b.band.id,
+                  displayName: b.band.displayName,
+                  role: b.role,
+                }))}
+                activeBandId={active.band.id}
+              />
               <Link
                 href="/dashboard/credits"
                 className="flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
                 title="Buy credits"
               >
                 <Coins className="size-3.5 text-primary" suppressHydrationWarning />
-                {(session.user as { credits?: number }).credits ?? 0}
+                {active.band.credits}
               </Link>
               <Button asChild variant="ghost" size="sm">
                 <Link href="/dashboard">Dashboard</Link>
               </Button>
-              <Button variant="outline" size="sm" onClick={handleSignOut}>
-                Sign out
-              </Button>
+              <SignOutButton />
             </>
           ) : (
             <>
