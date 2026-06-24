@@ -23,12 +23,12 @@
 	// Non-secret config. Secrets (DATABASE_URL, BETTER_AUTH_SECRET, STRIPE_*, R2_*,
 	// RESEND_API_KEY) are set via `wrangler secret put` / CI, NOT here.
 	"vars": {
-		"BETTER_AUTH_URL": "https://demoify.music"
+		"BETTER_AUTH_URL": "https://demoify.app"
 	}
 
-	// --- Custom domain (enable after demoify.music is on Cloudflare) ---------
+	// --- Custom domain (enable after demoify.app is on Cloudflare) ---------
 	// Uncomment once the zone is active, then redeploy:
 	// "routes": [
-	//   { "pattern": "demoify.music", "custom_domain": true }
+	//   { "pattern": "demoify.app", "custom_domain": true }
 	// ]
 }

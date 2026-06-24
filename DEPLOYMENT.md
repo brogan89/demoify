@@ -2,7 +2,7 @@
 
 Production runs as a Cloudflare Worker built by [OpenNext](https://opennext.js.org/cloudflare),
 with Postgres on Neon (via the Neon serverless driver), R2 for audio, Resend for email, and
-Stripe for credits. Served from **demoify.music**.
+Stripe for credits. Served from **demoify.app**.
 
 > **Note:** the original plan used Cloudflare Hyperdrive + `node-postgres` (`pg`). That path is
 > currently broken under OpenNext (`pg` pulls `pg-cloudflare`, which fails to bundle — open
@@ -33,34 +33,41 @@ placeholders. Do them roughly in order.
    For **local dev**, point `.env`'s `DATABASE_URL` at a Neon branch (e.g. a `dev` branch) too;
    the serverless driver can't talk to a plain local Postgres.
 
-## 2. Domain — demoify.music
+## 2. Domain — demoify.app
 
-1. `.music` isn't sold by Cloudflare Registrar — register it at a registrar that supports the TLD.
-2. Add the domain to Cloudflare (**Add site → Full setup**) and set the registrar's nameservers
-   to the two Cloudflare gives you. Wait for "Active".
-3. In `wrangler.jsonc`, uncomment the `routes` block so the Worker serves `demoify.music`.
+`.app` is a Google-run, HSTS-preloaded TLD — **HTTPS only** (no plain HTTP), which Workers
+satisfy by default.
+
+- **If registered at Cloudflare Registrar:** the zone is already in your Cloudflare account —
+  nothing to delegate. Skip to step 3.
+- **If registered elsewhere:** add the domain to Cloudflare (**Add site → Full setup**) and set
+  the registrar's nameservers to the two Cloudflare gives you. Wait for "Active".
+
+3. Bind the Worker to the domain: uncomment the `routes` block in `wrangler.jsonc`, then deploy.
+   (The custom-domain route auto-creates the DNS record + cert.) Do this only after the first
+   successful deploy has created the Worker.
 
 ## 3. R2 (already created — `demoify` bucket)
 
 1. Attach a public custom domain to the bucket: R2 → `demoify` → **Settings → Public access →
-   Custom domain** → `cdn.demoify.music` (Cloudflare adds the DNS record).
-2. CORS already includes `https://demoify.music` in `r2-cors.json`. Re-apply it:
+   Custom domain** → `cdn.demoify.app` (Cloudflare adds the DNS record).
+2. CORS already includes `https://demoify.app` in `r2-cors.json`. Re-apply it:
    ```
    npx wrangler r2 bucket cors set demoify --file r2-cors.json
    ```
-3. Set `R2_PUBLIC_URL` secret to `https://cdn.demoify.music` (step 6).
+3. Set `R2_PUBLIC_URL` secret to `https://cdn.demoify.app` (step 6).
 
 ## 4. Email — Resend
 
-1. Create an account at <https://resend.com>, add domain `demoify.music`, and add the SPF/DKIM
+1. Create an account at <https://resend.com>, add domain `demoify.app`, and add the SPF/DKIM
    DNS records it gives you to Cloudflare DNS. Wait for verification.
 2. Create an API key → that's `RESEND_API_KEY` (step 6).
-3. `EMAIL_FROM` defaults to `Demoify <noreply@demoify.music>` — override via secret if desired.
+3. `EMAIL_FROM` defaults to `Demoify <noreply@demoify.app>` — override via secret if desired.
 
 ## 5. Stripe (live)
 
 1. Switch to live mode, copy the live `STRIPE_SECRET_KEY`.
-2. Add a webhook endpoint → `https://demoify.music/api/credits/webhook`, event
+2. Add a webhook endpoint → `https://demoify.app/api/credits/webhook`, event
    `checkout.session.completed`. Copy the signing secret → `STRIPE_WEBHOOK_SECRET`.
 
 ## 6. Worker secrets
@@ -77,7 +84,7 @@ npx wrangler secret put R2_ACCOUNT_ID
 npx wrangler secret put R2_ACCESS_KEY_ID
 npx wrangler secret put R2_SECRET_ACCESS_KEY
 npx wrangler secret put R2_BUCKET               # demoify
-npx wrangler secret put R2_PUBLIC_URL           # https://cdn.demoify.music
+npx wrangler secret put R2_PUBLIC_URL           # https://cdn.demoify.app
 npx wrangler secret put RESEND_API_KEY
 # Optional social login:
 npx wrangler secret put GOOGLE_CLIENT_ID
@@ -95,9 +102,11 @@ npm run deploy        # opennextjs-cloudflare build && deploy
 Or push to `main` and let GitHub Actions do it (see below).
 
 ### GitHub Actions secrets (for CI in `.github/workflows/deploy.yml`)
-- `CLOUDFLARE_API_TOKEN` — token with Workers Scripts + Hyperdrive edit perms.
-- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_API_TOKEN` — use the **"Edit Cloudflare Workers"** token template.
+- `CLOUDFLARE_ACCOUNT_ID` — **already set** (equals your R2 account id).
 - `NEON_DIRECT_URL` — Neon direct connection string (migrations step).
+
+The CI workflow skips (stays green) until all three are present, then deploys automatically.
 
 ---
 
@@ -112,8 +121,8 @@ branch).
 ## Verification checklist
 - [ ] `npm run preview` boots; sign-up works.
 - [ ] `prisma migrate deploy` applied to Neon.
-- [ ] Sign up on demoify.music → verification email arrives → verify → log in.
+- [ ] Sign up on demoify.app → verification email arrives → verify → log in.
 - [ ] Password reset email arrives and completes.
-- [ ] Upload an MP3 → plays back from `cdn.demoify.music`.
+- [ ] Upload an MP3 → plays back from `cdn.demoify.app`.
 - [ ] Stripe checkout → credits increment (webhook 200).
 - [ ] Push to `main` → Actions deploys cleanly.

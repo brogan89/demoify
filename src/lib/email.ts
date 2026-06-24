@@ -7,7 +7,7 @@ export function isEmailConfigured(): boolean {
 
 /** From address for outgoing mail; must be on a Resend-verified domain. */
 function fromAddress(): string {
-  return process.env.EMAIL_FROM ?? "Demoify <noreply@demoify.music>";
+  return process.env.EMAIL_FROM ?? "Demoify <noreply@demoify.app>";
 }
 
 let client: Resend | null = null;

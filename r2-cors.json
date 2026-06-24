@@ -2,7 +2,7 @@
   "rules": [
     {
       "allowed": {
-        "origins": ["http://localhost:3000", "https://demoify.music"],
+        "origins": ["http://localhost:3000", "https://demoify.app"],
         "methods": ["PUT", "GET", "HEAD"],
         "headers": ["content-type"]
       },
