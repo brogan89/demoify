@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 
@@ -52,7 +52,7 @@ export function ResetPasswordForm() {
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="space-y-1.5">
         <Label htmlFor="password">New password</Label>
-        <Input id="password" name="password" type="password" required minLength={8} />
+        <PasswordInput id="password" name="password" required minLength={8} />
       </div>
       <Button type="submit" disabled={busy} className="w-full">
         {busy ? "Updating…" : "Set new password"}
