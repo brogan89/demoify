@@ -52,4 +52,9 @@ jobs:
 
       - name: Build & deploy (OpenNext → Cloudflare Workers)
         if: steps.gate.outputs.ready == 'true'
+        # BETTER_AUTH_SECRET is surfaced to the build so better-auth doesn't fall
+        # back to its default secret while collecting page data. The worker's
+        # runtime copy is set separately via `wrangler secret put` (see DEPLOYMENT.md).
+        env:
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
         run: npm run deploy
