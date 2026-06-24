@@ -32,11 +32,10 @@
 	// are set via `wrangler secret put` / CI, NOT here. No DATABASE_URL — D1 is a binding.
 	"vars": {
 		"BETTER_AUTH_URL": "https://demoify.app"
-	}
+	},
 
-	// --- Custom domain (enable after demoify.app is on Cloudflare) ---------
-	// Uncomment once the zone is active, then redeploy:
-	// "routes": [
-	//   { "pattern": "demoify.app", "custom_domain": true }
-	// ]
+	// --- Custom domain (zone demoify.app active on Cloudflare) -------------
+	"routes": [
+		{ "pattern": "demoify.app", "custom_domain": true }
+	]
 }
