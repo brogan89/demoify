@@ -11,7 +11,10 @@ type AddCommentInput = {
   projectId: string;
   versionId: string;
   body: string;
+  timestampSeconds?: number | null;
 };
+
+const MAX_TIMESTAMP_SECONDS = 86400; // 24h — a sane upper bound for any track.
 
 export async function addComment(input: AddCommentInput) {
   const user = await getCurrentUser();
@@ -32,6 +35,19 @@ export async function addComment(input: AddCommentInput) {
     return { error: "Version not found" };
   }
 
+  // Validate an optional playback-position anchor.
+  let timestampSeconds: number | null = null;
+  if (input.timestampSeconds != null) {
+    const t = Math.round(input.timestampSeconds);
+    if (!Number.isFinite(t) || t < 0 || t >= MAX_TIMESTAMP_SECONDS) {
+      return { error: "Invalid timestamp" };
+    }
+    if (version.duration && t > Math.ceil(version.duration)) {
+      return { error: "Timestamp is past the end of the track" };
+    }
+    timestampSeconds = t;
+  }
+
   // Public songs: any logged-in user. Private songs: band members only.
   if (version.project.visibility === "PRIVATE") {
     const role = await getMembership(version.project.bandId, user.id);
@@ -44,6 +60,7 @@ export async function addComment(input: AddCommentInput) {
       versionId: input.versionId,
       authorId: user.id,
       body,
+      timestampSeconds,
     },
   });
 

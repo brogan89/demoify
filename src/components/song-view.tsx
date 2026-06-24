@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Play } from "lucide-react";
-import { AudioPlayer } from "@/components/audio-player";
+import { AudioPlayer, type AudioPlayerHandle } from "@/components/audio-player";
 import { Comments, type CommentDTO } from "@/components/comments";
 import { recordPlay } from "@/app/actions/plays";
 import { cn } from "@/lib/utils";
@@ -52,6 +52,23 @@ export function SongView({
   const [selectedId, setSelectedId] = useState(versions[0]?.id);
   const selected = versions.find((v) => v.id === selectedId) ?? versions[0];
 
+  const playerRef = useRef<AudioPlayerHandle>(null);
+  // When jumping to a timestamped comment on a *different* version, we switch
+  // versions and seek once that version's audio loads.
+  const [startAt, setStartAt] = useState<number | null>(null);
+
+  function jumpTo(versionId: string, seconds: number) {
+    if (versionId === selected?.id) {
+      playerRef.current?.seekTo(seconds);
+      playerRef.current?.play();
+    } else {
+      setStartAt(seconds);
+      setSelectedId(versionId);
+    }
+  }
+
+  const getCurrentTime = () => playerRef.current?.getCurrentTime() ?? 0;
+
   // Lifetime play count for the URL, updated optimistically as you play.
   const [plays, setPlays] = useState(playCount);
   // Count at most one play per version per session, so resume/seek don't inflate.
@@ -89,9 +106,13 @@ export function SongView({
           </span>
         </div>
         <AudioPlayer
+          ref={playerRef}
           src={selected.audioUrl}
           initialDuration={selected.duration}
           onPlay={() => handlePlay(selected.id)}
+          autoPlay={startAt != null}
+          startAt={startAt}
+          onStartConsumed={() => setStartAt(null)}
         />
       </div>
 
@@ -142,6 +163,8 @@ export function SongView({
         currentUserId={currentUserId}
         canComment={canComment}
         canModerate={canModerate}
+        getCurrentTime={getCurrentTime}
+        onJumpTo={jumpTo}
       />
     </div>
   );

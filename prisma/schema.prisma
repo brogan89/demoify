@@ -210,6 +210,9 @@ model Comment {
   authorId  String
   author    User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
   body      String
+  // Optional playback position (whole seconds) this comment is anchored to.
+  // Null means a general comment not tied to a moment in the track.
+  timestampSeconds Int?
   createdAt DateTime    @default(now())
 
   @@index([projectId])

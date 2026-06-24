@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useImperativeHandle, useRef, useState, type Ref } from "react";
 import { Play, Pause } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Waveform } from "@/components/waveform";
@@ -12,12 +12,21 @@ function fmt(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+export type AudioPlayerHandle = {
+  getCurrentTime(): number;
+  seekTo(seconds: number): void;
+  play(): void;
+};
+
 export function AudioPlayer({
   src,
   initialDuration,
   onPlay,
   onEnded,
   autoPlay = false,
+  startAt = null,
+  onStartConsumed,
+  ref,
 }: {
   src: string;
   initialDuration?: number | null;
@@ -25,6 +34,11 @@ export function AudioPlayer({
   onEnded?: () => void;
   // Start playing automatically when `src` changes — used to advance a playlist.
   autoPlay?: boolean;
+  // Seek here once the (new) source's metadata loads — used to jump to a
+  // timestamped comment, including after switching to that comment's version.
+  startAt?: number | null;
+  onStartConsumed?: () => void;
+  ref?: Ref<AudioPlayerHandle>;
 }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
@@ -52,6 +66,16 @@ export function AudioPlayer({
     setCurrent(t);
   }
 
+  useImperativeHandle(
+    ref,
+    () => ({
+      getCurrentTime: () => audioRef.current?.currentTime ?? current,
+      seekTo,
+      play: () => void audioRef.current?.play(),
+    }),
+    [current],
+  );
+
   return (
     <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
       <audio
@@ -71,7 +95,14 @@ export function AudioPlayer({
         }}
         onPause={() => setPlaying(false)}
         onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
-        onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+        onLoadedMetadata={(e) => {
+          setDuration(e.currentTarget.duration);
+          if (startAt != null) {
+            e.currentTarget.currentTime = startAt;
+            setCurrent(startAt);
+            onStartConsumed?.();
+          }
+        }}
         onEnded={() => {
           setPlaying(false);
           onEnded?.();
