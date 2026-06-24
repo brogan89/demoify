@@ -77,7 +77,7 @@ export default async function ProjectPage({
           <p className="mt-1 text-sm text-muted-foreground">{project.description}</p>
         )}
         <p className="mt-2 font-mono text-xs text-muted-foreground">
-          demoify.com{publicPath}
+          demoify.app{publicPath}
         </p>
       </div>
 

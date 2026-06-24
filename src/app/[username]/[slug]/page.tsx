@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { SongView, type VersionDTO } from "@/components/song-view";
 import { type CommentDTO } from "@/components/comments";
+import { ShareLink } from "@/components/share-link";
 
 async function getProject(username: string, slug: string) {
   return prisma.songProject.findFirst({
@@ -86,6 +87,10 @@ export default async function PublicSongPage({
             </p>
           )}
         </div>
+      </div>
+
+      <div className="mb-6">
+        <ShareLink path={`${username}/${slug}`} />
       </div>
 
       <SongView

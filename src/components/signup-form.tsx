@@ -61,7 +61,7 @@ export function SignupForm() {
         <Label htmlFor="bandName">Band name</Label>
         <Input id="bandName" name="bandName" required placeholder="Band Name" />
         <p className="text-xs text-muted-foreground">
-          Your public URL is created from this, e.g. demoify.com/
+          Your public URL is created from this, e.g. demoify.app/
           <span className="font-mono">band-name</span>/song
         </p>
       </div>

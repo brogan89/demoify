@@ -40,7 +40,7 @@ export default function Home() {
             <div>
               <p className="text-sm font-semibold">Song Title</p>
               <p className="font-mono text-xs text-muted-foreground">
-                demoify.com/band-name/song-title
+                demoify.app/band-name/song-title
               </p>
             </div>
           </div>

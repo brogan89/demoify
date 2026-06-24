@@ -27,7 +27,7 @@ export function CreateSongForm() {
           id="title"
           name="title"
           required
-          placeholder="None of This Is Real"
+          placeholder="Song Title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
