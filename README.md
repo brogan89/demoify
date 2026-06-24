@@ -9,7 +9,9 @@ Auth, Cloudflare R2, and Stripe.
 ### Prerequisites
 
 - **Node.js 20+**
-- **A Postgres database** — local (`postgres`/Docker) or a hosted instance.
+- **A Postgres database** — the easiest path is Docker (`just db` starts one
+  pre-configured to match the default `DATABASE_URL`); a local `postgres` install
+  or a hosted instance works too.
 - **[just](https://github.com/casey/just)** (optional) — task runner for the
   recipes below. Install with `brew install just`.
 
@@ -56,9 +58,12 @@ purchases simply stay disabled until their credentials are present.
 | Command | What it does |
 | --- | --- |
 | `just run` | Start the dev server. |
+| `just db` | Start the local Postgres database (Docker) and wait until ready. |
+| `just db-stop` | Stop the local Postgres database (data is preserved). |
 | `just migrate` | Create/apply a migration (`npx prisma migrate dev`). |
 | `just generate` | Regenerate the Prisma client. |
 | `just studio` | Open Prisma Studio to inspect the database. |
+| `just users` | List signed-up users with song count, credits, and join date. |
 | `just reset` | Drop and recreate the database (destructive). |
 | `just build` | Production build. |
 | `just lint` | Run ESLint. |

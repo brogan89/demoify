@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { isR2Configured } from "@/lib/r2";
 import { SongView, type VersionDTO } from "@/components/song-view";
+import { type CommentDTO } from "@/components/comments";
 import { UploadVersion } from "@/components/upload-version";
 
 export default async function ProjectPage({
@@ -22,6 +23,13 @@ export default async function ProjectPage({
       include: {
         owner: { select: { username: true, displayName: true } },
         versions: { orderBy: { versionNumber: "desc" } },
+        comments: {
+          orderBy: { createdAt: "desc" },
+          include: {
+            author: { select: { id: true, displayName: true, avatarUrl: true } },
+            version: { select: { versionNumber: true } },
+          },
+        },
       },
     }),
     prisma.user.findUnique({ where: { id: user.id }, select: { credits: true } }),
@@ -35,6 +43,16 @@ export default async function ProjectPage({
     changelog: v.changelog,
     duration: v.duration,
     uploadedAt: v.uploadedAt.toISOString(),
+  }));
+
+  const comments: CommentDTO[] = project.comments.map((c) => ({
+    id: c.id,
+    body: c.body,
+    createdAt: c.createdAt.toISOString(),
+    versionNumber: c.version.versionNumber,
+    authorId: c.authorId,
+    authorName: c.author.displayName,
+    authorAvatarUrl: c.author.avatarUrl,
   }));
 
   const publicPath = `/${project.owner.username}/${project.slug}`;
@@ -68,7 +86,14 @@ export default async function ProjectPage({
         />
       </div>
 
-      <SongView versions={versions} />
+      <SongView
+        versions={versions}
+        projectId={project.id}
+        playCount={project.playCount}
+        comments={comments}
+        currentUserId={user.id}
+        isOwner
+      />
     </div>
   );
 }

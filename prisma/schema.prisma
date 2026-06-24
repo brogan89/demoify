@@ -36,6 +36,7 @@ model User {
   accounts     Account[]
   projects     SongProject[]
   transactions CreditTransaction[]
+  comments     Comment[]
 
   @@map("user")
 }
@@ -96,8 +97,11 @@ model SongProject {
   title       String
   description String?
   createdAt   DateTime @default(now())
+  // Lifetime plays, counted per song URL so they survive new version uploads.
+  playCount   Int      @default(0)
 
   versions SongVersion[]
+  comments Comment[]
 
   // Permanent URL is /[username]/[slug] — slug unique per owner
   @@unique([ownerId, slug])
@@ -129,6 +133,25 @@ model SongVersion {
   duration      Float?
   uploadedAt    DateTime    @default(now())
 
+  comments Comment[]
+
   @@unique([projectId, versionNumber])
   @@map("song_version")
+}
+
+// A comment on a song. Tagged with the version it was written against so feedback
+// stays anchored to a specific revision even after newer versions are uploaded.
+model Comment {
+  id        String      @id @default(cuid())
+  projectId String
+  project   SongProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  versionId String
+  version   SongVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime    @default(now())
+
+  @@index([projectId])
+  @@map("comment")
 }

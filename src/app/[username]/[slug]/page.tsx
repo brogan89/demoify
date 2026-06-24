@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Disc3 } from "lucide-react";
 import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/session";
 import { SongView, type VersionDTO } from "@/components/song-view";
+import { type CommentDTO } from "@/components/comments";
 
 async function getProject(username: string, slug: string) {
   return prisma.songProject.findFirst({
@@ -10,6 +12,13 @@ async function getProject(username: string, slug: string) {
     include: {
       owner: { select: { username: true, displayName: true } },
       versions: { orderBy: { versionNumber: "desc" } },
+      comments: {
+        orderBy: { createdAt: "desc" },
+        include: {
+          author: { select: { id: true, displayName: true, avatarUrl: true } },
+          version: { select: { versionNumber: true } },
+        },
+      },
     },
   });
 }
@@ -36,7 +45,10 @@ export default async function PublicSongPage({
   params: Promise<{ username: string; slug: string }>;
 }) {
   const { username, slug } = await params;
-  const project = await getProject(username, slug);
+  const [project, currentUser] = await Promise.all([
+    getProject(username, slug),
+    getCurrentUser(),
+  ]);
   if (!project) notFound();
 
   const versions: VersionDTO[] = project.versions.map((v) => ({
@@ -47,6 +59,19 @@ export default async function PublicSongPage({
     duration: v.duration,
     uploadedAt: v.uploadedAt.toISOString(),
   }));
+
+  const comments: CommentDTO[] = project.comments.map((c) => ({
+    id: c.id,
+    body: c.body,
+    createdAt: c.createdAt.toISOString(),
+    versionNumber: c.version.versionNumber,
+    authorId: c.authorId,
+    authorName: c.author.displayName,
+    authorAvatarUrl: c.author.avatarUrl,
+  }));
+
+  const currentUserId = currentUser?.id ?? null;
+  const isOwner = currentUserId === project.ownerId;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
@@ -63,7 +88,14 @@ export default async function PublicSongPage({
         </div>
       </div>
 
-      <SongView versions={versions} />
+      <SongView
+        versions={versions}
+        projectId={project.id}
+        playCount={project.playCount}
+        comments={comments}
+        currentUserId={currentUserId}
+        isOwner={isOwner}
+      />
     </div>
   );
 }

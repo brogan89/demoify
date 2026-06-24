@@ -14,9 +14,11 @@ function fmt(seconds: number): string {
 export function AudioPlayer({
   src,
   initialDuration,
+  onPlay,
 }: {
   src: string;
   initialDuration?: number | null;
+  onPlay?: () => void;
 }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
@@ -54,7 +56,10 @@ export function AudioPlayer({
         ref={audioRef}
         src={src}
         preload="metadata"
-        onPlay={() => setPlaying(true)}
+        onPlay={() => {
+          setPlaying(true);
+          onPlay?.();
+        }}
         onPause={() => setPlaying(false)}
         onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
         onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}

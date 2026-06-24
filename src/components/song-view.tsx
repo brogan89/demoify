@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { Play } from "lucide-react";
 import { AudioPlayer } from "@/components/audio-player";
+import { Comments, type CommentDTO } from "@/components/comments";
+import { recordPlay } from "@/app/actions/plays";
 import { cn } from "@/lib/utils";
 
 export type VersionDTO = {
@@ -28,10 +31,36 @@ function fmtDate(iso: string): string {
   });
 }
 
-export function SongView({ versions }: { versions: VersionDTO[] }) {
+export function SongView({
+  versions,
+  projectId,
+  playCount,
+  comments,
+  currentUserId,
+  isOwner,
+}: {
+  versions: VersionDTO[];
+  projectId: string;
+  playCount: number;
+  comments: CommentDTO[];
+  currentUserId: string | null;
+  isOwner: boolean;
+}) {
   // versions arrive newest-first; default the player to the latest.
   const [selectedId, setSelectedId] = useState(versions[0]?.id);
   const selected = versions.find((v) => v.id === selectedId) ?? versions[0];
+
+  // Lifetime play count for the URL, updated optimistically as you play.
+  const [plays, setPlays] = useState(playCount);
+  // Count at most one play per version per session, so resume/seek don't inflate.
+  const countedRef = useRef<Set<string>>(new Set());
+
+  function handlePlay(versionId: string) {
+    if (countedRef.current.has(versionId)) return;
+    countedRef.current.add(versionId);
+    setPlays((n) => n + 1);
+    void recordPlay(projectId);
+  }
 
   if (!selected) {
     return (
@@ -44,13 +73,24 @@ export function SongView({ versions }: { versions: VersionDTO[] }) {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <div className="flex items-baseline justify-between">
+        <div className="flex items-baseline justify-between gap-2">
           <h2 className="text-sm font-medium text-muted-foreground">
             Now playing — v{selected.versionNumber}
             {selected.versionNumber === versions[0].versionNumber && " (latest)"}
           </h2>
+          <span
+            className="flex items-center gap-1 text-xs text-muted-foreground"
+            title="Total plays"
+          >
+            <Play className="size-3 fill-current" />
+            {plays.toLocaleString()} {plays === 1 ? "play" : "plays"}
+          </span>
         </div>
-        <AudioPlayer src={selected.audioUrl} initialDuration={selected.duration} />
+        <AudioPlayer
+          src={selected.audioUrl}
+          initialDuration={selected.duration}
+          onPlay={() => handlePlay(selected.id)}
+        />
       </div>
 
       <div>
@@ -91,6 +131,15 @@ export function SongView({ versions }: { versions: VersionDTO[] }) {
           })}
         </ol>
       </div>
+
+      <Comments
+        projectId={projectId}
+        selectedVersionId={selected.id}
+        selectedVersionNumber={selected.versionNumber}
+        comments={comments}
+        currentUserId={currentUserId}
+        isOwner={isOwner}
+      />
     </div>
   );
 }
