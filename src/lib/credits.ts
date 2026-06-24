@@ -15,6 +15,10 @@ export const STARTING_CREDITS = 100;
 export const UPLOAD_COST = 10;
 export const CREDITS_PER_USD = 100;
 
+// A new user's first artist gets STARTING_CREDITS (10 free uploads). Creating an
+// *additional* artist is free, but it starts with just one free upload's worth.
+export const NEW_ARTIST_CREDITS = UPLOAD_COST;
+
 /**
  * Credits earned for engaging with another band's song, awarded at most once per
  * song per action (see `grantEngagementCredits`). Keys double as the ledger

@@ -8,10 +8,25 @@ import {
   ACTIVE_BAND_COOKIE,
   getMembership,
   canManageMembers,
+  canManageSongs,
   type Role,
 } from "@/lib/band";
+import { uniqueBandUsername } from "@/lib/username";
+import { NEW_ARTIST_CREDITS } from "@/lib/credits";
 
 const ROLES: Role[] = ["ADMIN", "MANAGER", "MEMBER"];
+const MAX_NAME_LENGTH = 60;
+const MAX_BIO_LENGTH = 500;
+
+/** Persist the active-band cookie (shared by setActiveBand and createArtistProfile). */
+async function writeActiveBandCookie(bandId: string) {
+  (await cookies()).set(ACTIVE_BAND_COOKIE, bandId, {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+}
 
 /** Switch which band the user is acting as (persisted in a cookie). */
 export async function setActiveBand(bandId: string) {
@@ -21,13 +36,78 @@ export async function setActiveBand(bandId: string) {
   const role = await getMembership(bandId, user.id);
   if (!role) return { error: "Not a member of that band" };
 
-  (await cookies()).set(ACTIVE_BAND_COOKIE, bandId, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 365,
-  });
+  await writeActiveBandCookie(bandId);
   revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+/**
+ * Create an additional artist profile for the current user. Free to create, but
+ * the new artist starts with just one free upload's worth of credits (the first
+ * artist, made at signup, gets the full STARTING_CREDITS). The user becomes its
+ * ADMIN and it's switched to active.
+ */
+export async function createArtistProfile(input: { name: string }) {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const name = input.name.trim();
+  if (!name) return { error: "Artist name is required" };
+  if (name.length > MAX_NAME_LENGTH) {
+    return { error: `Name must be ${MAX_NAME_LENGTH} characters or fewer` };
+  }
+
+  const band = await prisma.band.create({
+    data: {
+      username: await uniqueBandUsername(name),
+      displayName: name,
+      credits: NEW_ARTIST_CREDITS,
+    },
+  });
+  await prisma.bandMembership.create({
+    data: { bandId: band.id, userId: user.id, role: "ADMIN" },
+  });
+
+  await writeActiveBandCookie(band.id);
+  revalidatePath("/dashboard");
+  return { ok: true, username: band.username };
+}
+
+/** Update an artist profile's display name, bio, and/or logo. ADMIN/MANAGER only. */
+export async function updateArtistProfile(input: {
+  bandId: string;
+  displayName?: string;
+  bio?: string;
+  avatarUrl?: string;
+}) {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const role = await getMembership(input.bandId, user.id);
+  if (!canManageSongs(role)) return { error: "Not allowed" };
+
+  const data: { displayName?: string; bio?: string | null; avatarUrl?: string } = {};
+  if (input.displayName !== undefined) {
+    const name = input.displayName.trim();
+    if (!name) return { error: "Name can't be empty" };
+    if (name.length > MAX_NAME_LENGTH) {
+      return { error: `Name must be ${MAX_NAME_LENGTH} characters or fewer` };
+    }
+    data.displayName = name;
+  }
+  if (input.bio !== undefined) {
+    const bio = input.bio.trim();
+    if (bio.length > MAX_BIO_LENGTH) {
+      return { error: `Bio must be ${MAX_BIO_LENGTH} characters or fewer` };
+    }
+    data.bio = bio || null;
+  }
+  if (input.avatarUrl !== undefined) data.avatarUrl = input.avatarUrl;
+
+  const band = await prisma.band.update({ where: { id: input.bandId }, data });
+
+  revalidatePath("/dashboard/band");
+  revalidatePath(`/${band.username}`);
   return { ok: true };
 }
 

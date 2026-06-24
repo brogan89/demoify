@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTransition } from "react";
-import { Check, ChevronsUpDown, Settings, Users } from "lucide-react";
+import { Check, ChevronsUpDown, Plus, Settings, Users } from "lucide-react";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -55,7 +55,7 @@ export function BandSwitcher({
         <ChevronsUpDown className="size-3.5 text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>Your bands</DropdownMenuLabel>
+        <DropdownMenuLabel>Your artists</DropdownMenuLabel>
         {bands.map((b) => (
           <DropdownMenuItem
             key={b.id}
@@ -73,9 +73,15 @@ export function BandSwitcher({
         ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
+          <Link href="/dashboard/new-artist" className="flex items-center gap-2">
+            <Plus className="size-3.5" />
+            New artist profile
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
           <Link href="/dashboard/band" className="flex items-center gap-2">
             <Settings className="size-3.5" />
-            Manage band
+            Manage artist
           </Link>
         </DropdownMenuItem>
       </DropdownMenuContent>

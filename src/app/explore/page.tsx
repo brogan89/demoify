@@ -1,11 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Music4, Play, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { LikeButton } from "@/components/like-button";
+import { SongCard } from "@/components/song-card";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -90,39 +89,22 @@ export default async function ExplorePage({
         </p>
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {songs.map((s) => {
-            const liked = s.likes.length > 0;
-            const path = `/${s.band.username}/${s.slug}`;
-            return (
-              <li key={s.id}>
-                <Card className="flex h-full flex-col">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <Music4 className="size-4 shrink-0 text-primary" />
-                      <Link href={path} className="truncate hover:underline">
-                        {s.title}
-                      </Link>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="mt-auto flex items-center justify-between gap-2 text-sm text-muted-foreground">
-                    <span className="min-w-0 truncate">{s.band.displayName}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="flex items-center gap-1 text-xs" title="Plays">
-                        <Play className="size-3 fill-current" />
-                        {s.playCount.toLocaleString()}
-                      </span>
-                      <LikeButton
-                        projectId={s.id}
-                        initialLiked={liked}
-                        initialCount={s._count.likes}
-                        isAuthed={Boolean(user)}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              </li>
-            );
-          })}
+          {songs.map((s) => (
+            <li key={s.id}>
+              <SongCard
+                song={{
+                  id: s.id,
+                  title: s.title,
+                  slug: s.slug,
+                  playCount: s.playCount,
+                  likeCount: s._count.likes,
+                  liked: s.likes.length > 0,
+                  band: s.band,
+                }}
+                isAuthed={Boolean(user)}
+              />
+            </li>
+          ))}
         </ul>
       )}
     </div>

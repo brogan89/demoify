@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Disc3, Lock } from "lucide-react";
 import { prisma } from "@/lib/db";
@@ -109,7 +110,15 @@ export default async function PublicSongPage({
               <Lock className="size-4 text-muted-foreground" aria-label="Private" />
             )}
           </h1>
-          <p className="text-sm text-muted-foreground">by {project.band.displayName}</p>
+          <p className="text-sm text-muted-foreground">
+            by{" "}
+            <Link
+              href={`/${project.band.username}`}
+              className="hover:text-foreground hover:underline"
+            >
+              {project.band.displayName}
+            </Link>
+          </p>
           {project.description && (
             <p className="mt-2 max-w-prose text-sm text-muted-foreground">
               {project.description}

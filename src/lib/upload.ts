@@ -4,10 +4,19 @@ export const ACCEPTED_AUDIO = ["audio/mpeg", "audio/wav", "audio/x-wav", "audio/
 export const ACCEPT_ATTR = ".mp3,.wav,audio/mpeg,audio/wav";
 export const MAX_BYTES = 100 * 1024 * 1024; // 100 MB
 
+export const ACCEPTED_IMAGE = ["image/png", "image/jpeg", "image/webp"];
+export const IMAGE_ACCEPT_ATTR = ".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp";
+export const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
+
 export function isAcceptedAudio(file: File): boolean {
   if (ACCEPTED_AUDIO.includes(file.type)) return true;
   // Some browsers report empty type for .wav — fall back to extension.
   return /\.(mp3|wav)$/i.test(file.name);
+}
+
+export function isAcceptedImage(file: File): boolean {
+  if (ACCEPTED_IMAGE.includes(file.type)) return true;
+  return /\.(png|jpe?g|webp)$/i.test(file.name);
 }
 
 /** Read audio duration (seconds) client-side via an <audio> element. */

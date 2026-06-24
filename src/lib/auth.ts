@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "@/lib/db";
 import { slugify } from "@/lib/slug";
+import { uniqueBandUsername } from "@/lib/username";
 import { STARTING_CREDITS } from "@/lib/credits";
 import { sendEmail, actionEmail, isEmailConfigured } from "@/lib/email";
 
@@ -18,18 +19,6 @@ async function uniqueUserUsername(base: string): Promise<string> {
   let candidate = root;
   let n = 1;
   while (await prisma.user.findUnique({ where: { username: candidate }, select: { id: true } })) {
-    n += 1;
-    candidate = `${root}-${n}`;
-  }
-  return candidate;
-}
-
-/** Same, but for the band's public URL handle (`band.username`). */
-async function uniqueBandUsername(base: string): Promise<string> {
-  const root = slugify(base) || "band";
-  let candidate = root;
-  let n = 1;
-  while (await prisma.band.findUnique({ where: { username: candidate }, select: { id: true } })) {
     n += 1;
     candidate = `${root}-${n}`;
   }

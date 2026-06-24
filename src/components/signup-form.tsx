@@ -21,7 +21,7 @@ export function SignupForm() {
     const bandName = String(form.get("bandName")).trim();
 
     if (!bandName) {
-      toast.error("Band name is required");
+      toast.error("Artist name is required");
       return;
     }
     if (password.length < 8) {
@@ -59,11 +59,11 @@ export function SignupForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="space-y-1.5">
-        <Label htmlFor="bandName">Band name</Label>
-        <Input id="bandName" name="bandName" required placeholder="Band Name" />
+        <Label htmlFor="bandName">Artist name</Label>
+        <Input id="bandName" name="bandName" required placeholder="Artist name" />
         <p className="text-xs text-muted-foreground">
-          Your public URL is created from this, e.g. demoify.app/
-          <span className="font-mono">band-name</span>/song
+          Your first artist profile is created from this, at demoify.app/
+          <span className="font-mono">artist-name</span>. You can add more later.
         </p>
       </div>
       <div className="space-y-1.5">

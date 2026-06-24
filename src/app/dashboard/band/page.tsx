@@ -1,9 +1,11 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Users } from "lucide-react";
+import { ExternalLink, Users } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
-import { getActiveBand, canManageMembers, type Role } from "@/lib/band";
+import { getActiveBand, canManageMembers, canManageSongs, type Role } from "@/lib/band";
 import { ManageBandMembers, type MemberRow } from "@/components/manage-band-members";
+import { EditArtistProfile } from "@/components/edit-artist-profile";
 
 export default async function BandPage() {
   const user = await getCurrentUser();
@@ -11,6 +13,11 @@ export default async function BandPage() {
 
   const active = await getActiveBand();
   if (!active) redirect("/dashboard");
+
+  const profile = await prisma.band.findUnique({
+    where: { id: active.band.id },
+    select: { bio: true, avatarUrl: true },
+  });
 
   const memberships = await prisma.bandMembership.findMany({
     where: { bandId: active.band.id },
@@ -35,12 +42,29 @@ export default async function BandPage() {
         <Users className="size-7 text-primary" />
         <div>
           <h1 className="text-2xl font-semibold">{active.band.displayName}</h1>
-          <p className="text-sm text-muted-foreground">
-            Band members · demoify.app/{active.band.username}
-          </p>
+          <Link
+            href={`/${active.band.username}`}
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground hover:underline"
+          >
+            demoify.app/{active.band.username}
+            <ExternalLink className="size-3" />
+          </Link>
         </div>
       </div>
 
+      {canManageSongs(active.role) && (
+        <section className="mb-8">
+          <h2 className="mb-3 text-sm font-medium">Artist profile</h2>
+          <EditArtistProfile
+            bandId={active.band.id}
+            initialDisplayName={active.band.displayName}
+            initialBio={profile?.bio ?? ""}
+            initialAvatarUrl={profile?.avatarUrl ?? null}
+          />
+        </section>
+      )}
+
+      <h2 className="mb-3 text-sm font-medium">Members</h2>
       <ManageBandMembers
         bandId={active.band.id}
         members={members}

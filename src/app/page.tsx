@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Disc3, History, Link2, MessageSquare } from "lucide-react";
+import { Disc3, Heart, History, Link2, Mail, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WaveformBars } from "@/components/waveform";
 
@@ -85,6 +85,26 @@ export default function Home() {
             <p className="mt-1 text-sm text-muted-foreground">{f.body}</p>
           </div>
         ))}
+      </section>
+
+      <section className="mx-auto max-w-2xl pb-20 text-center">
+        <div className="rounded-lg border p-6">
+          <Heart className="mx-auto mb-3 size-5 text-primary" />
+          <p className="text-sm text-muted-foreground">
+            Demoify is a passion project built by a solo developer, and it&rsquo;s still in
+            early development — so expect rough edges as it grows.
+          </p>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Have feedback or found a bug? I&rsquo;d love to hear it.
+          </p>
+          <a
+            href="mailto:wineanddev@gmail.com?subject=Demoify%20feedback"
+            className="mt-4 inline-flex items-center gap-1.5 text-sm text-primary underline-offset-4 hover:underline"
+          >
+            <Mail className="size-4" />
+            wineanddev@gmail.com
+          </a>
+        </div>
       </section>
     </div>
   );
