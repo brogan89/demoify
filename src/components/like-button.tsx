@@ -44,6 +44,10 @@ export function LikeButton({
       }
       setLiked(res.liked);
       setCount(res.count);
+      if (res.earned > 0) {
+        toast.success(`+${res.earned} credit${res.earned === 1 ? "" : "s"} for the like`);
+        router.refresh(); // reflect the new balance in the header
+      }
     });
   }
 

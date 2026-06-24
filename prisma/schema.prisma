@@ -100,8 +100,8 @@ model Band {
   username    String   @unique
   displayName String
   avatarUrl   String?
-  // Credits balance. New bands start with enough for 3 free uploads (STARTING_CREDITS).
-  credits     Int      @default(150)
+  // Credits balance. New bands start with enough for 10 free uploads (STARTING_CREDITS).
+  credits     Int      @default(100)
   createdAt   DateTime @default(now())
 
   memberships  BandMembership[]
@@ -168,17 +168,24 @@ model Like {
   @@map("song_like")
 }
 
-// Ledger of credit changes — purchases (+) and uploads (-). Source of truth for
-// the balance is Band.credits; this table is for history and webhook idempotency.
+// Ledger of credit changes — purchases (+), uploads (-), and engagement rewards (+).
+// Source of truth for the balance is Band.credits; this table is for history and
+// idempotency (webhook replays, and once-per-song engagement grants).
 model CreditTransaction {
   id              String   @id @default(cuid())
   bandId          String
   band            Band     @relation(fields: [bandId], references: [id], onDelete: Cascade)
   delta           Int // positive = added, negative = spent
-  reason          String // "upload" | "purchase"
+  reason          String // "upload" | "purchase" | "like" | "comment" | "play"
   stripeSessionId String?  @unique
+  // Engagement grants only: the user who engaged and the song (projectId) they
+  // engaged with. Null for upload/purchase rows. The unique constraint caps each
+  // engager to one reward per song per action.
+  userId          String?
+  refId           String?
   createdAt       DateTime @default(now())
 
+  @@unique([userId, reason, refId])
   @@index([bandId])
   @@map("credit_transaction")
 }

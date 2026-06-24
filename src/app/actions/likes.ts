@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
+import { grantEngagementCredits } from "@/lib/engagement";
 
 /**
  * Toggle the current user's like on a public song. Returns the new state and
@@ -23,6 +24,7 @@ export async function toggleLike(projectId: string) {
 
   // Toggle by trying to delete the like; if it wasn't there (P2025), create it.
   let liked: boolean;
+  let earned = 0;
   try {
     await prisma.like.delete({
       where: { projectId_userId: { projectId, userId: user.id } },
@@ -32,6 +34,13 @@ export async function toggleLike(projectId: string) {
     if ((err as { code?: string }).code !== "P2025") throw err;
     await prisma.like.create({ data: { projectId, userId: user.id } });
     liked = true;
+    // Reward the engager (once per song; not for your own band's songs).
+    earned = await grantEngagementCredits({
+      engagerUserId: user.id,
+      songBandId: project.bandId,
+      projectId,
+      reason: "like",
+    });
   }
 
   const count = await prisma.like.count({ where: { projectId } });
@@ -39,5 +48,5 @@ export async function toggleLike(projectId: string) {
   revalidatePath("/explore");
   revalidatePath("/library");
   revalidatePath(`/${project.band.username}/${project.slug}`);
-  return { liked, count };
+  return { liked, count, earned };
 }

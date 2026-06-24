@@ -2,15 +2,31 @@
  * Credit economics.
  *
  * Base price: 100 credits = $1 USD (i.e. 1 credit = 1 cent).
- * New users start with enough credits for 3 free uploads.
+ * New users start with enough credits for 10 free uploads.
  * Each track upload costs UPLOAD_COST credits.
+ *
+ * Credits can also be earned by engaging with other bands' songs (see
+ * ENGAGEMENT_CREDITS), which keeps active listeners supplied with uploads.
  *
  * `priceCents` is stored explicitly per package so future sales can lower the
  * price (or grant bonus credits) without touching the base ratio.
  */
-export const STARTING_CREDITS = 150;
-export const UPLOAD_COST = 50;
+export const STARTING_CREDITS = 100;
+export const UPLOAD_COST = 10;
 export const CREDITS_PER_USD = 100;
+
+/**
+ * Credits earned for engaging with another band's song, awarded at most once per
+ * song per action (see `grantEngagementCredits`). Keys double as the ledger
+ * `reason` for engagement rows.
+ */
+export const ENGAGEMENT_CREDITS = {
+  like: 1,
+  comment: 2,
+  play: 3,
+} as const;
+
+export type EngagementReason = keyof typeof ENGAGEMENT_CREDITS;
 
 export type CreditPackage = {
   id: string;

@@ -4,7 +4,8 @@ import { useRef, useState } from "react";
 import { Play } from "lucide-react";
 import { AudioPlayer, type AudioPlayerHandle } from "@/components/audio-player";
 import { Comments, type CommentDTO } from "@/components/comments";
-import { recordPlay } from "@/app/actions/plays";
+import { toast } from "sonner";
+import { recordPlay, recordFullPlay } from "@/app/actions/plays";
 import { cn } from "@/lib/utils";
 
 export type VersionDTO = {
@@ -81,6 +82,13 @@ export function SongView({
     void recordPlay(projectId);
   }
 
+  // A full start-to-end listen rewards the listener with credits (once per song).
+  function handleEnded() {
+    void recordFullPlay(projectId).then((res) => {
+      if (res.earned > 0) toast.success(`+${res.earned} credits for listening`);
+    });
+  }
+
   if (!selected) {
     return (
       <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
@@ -110,6 +118,7 @@ export function SongView({
           src={selected.audioUrl}
           initialDuration={selected.duration}
           onPlay={() => handlePlay(selected.id)}
+          onEnded={handleEnded}
           autoPlay={startAt != null}
           startAt={startAt}
           onStartConsumed={() => setStartAt(null)}

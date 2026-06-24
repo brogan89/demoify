@@ -119,6 +119,9 @@ export function Comments({
       setBody("");
       setWithTimestamp(false);
       setTsField("");
+      if (res.earned && res.earned > 0) {
+        toast.success(`+${res.earned} credits for commenting`);
+      }
       router.refresh();
     });
   }

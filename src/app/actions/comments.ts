@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { getMembership, isMember, canManageSongs } from "@/lib/band";
+import { grantEngagementCredits } from "@/lib/engagement";
 
 const MAX_COMMENT_LENGTH = 2000;
 
@@ -64,9 +65,17 @@ export async function addComment(input: AddCommentInput) {
     },
   });
 
+  // Reward the commenter (once per song; not for your own band's songs).
+  const earned = await grantEngagementCredits({
+    engagerUserId: user.id,
+    songBandId: version.project.bandId,
+    projectId: input.projectId,
+    reason: "comment",
+  });
+
   revalidatePath(`/${version.project.band.username}/${version.project.slug}`);
   revalidatePath(`/dashboard/${input.projectId}`);
-  return { ok: true };
+  return { ok: true, earned };
 }
 
 export async function deleteComment(commentId: string) {
