@@ -21,8 +21,8 @@ export function ThemeToggle() {
     >
       {/* Sun shows in light mode, moon in dark mode; CSS swaps them so there's
           no hydration flash from reading the theme on the client. */}
-      <Sun className="size-4 dark:hidden" />
-      <Moon className="hidden size-4 dark:block" />
+      <Sun className="size-4 dark:hidden" suppressHydrationWarning />
+      <Moon className="hidden size-4 dark:block" suppressHydrationWarning />
     </Button>
   );
 }

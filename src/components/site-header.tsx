@@ -21,7 +21,7 @@ export function SiteHeader() {
     <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2 font-semibold">
-          <Disc3 className="size-5 text-primary" />
+          <Disc3 className="size-5 text-primary" suppressHydrationWarning />
           Demoify
         </Link>
         <nav className="flex items-center gap-2">
@@ -33,7 +33,7 @@ export function SiteHeader() {
                 className="flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
                 title="Buy credits"
               >
-                <Coins className="size-3.5 text-primary" />
+                <Coins className="size-3.5 text-primary" suppressHydrationWarning />
                 {(session.user as { credits?: number }).credits ?? 0}
               </Link>
               <Button asChild variant="ghost" size="sm">

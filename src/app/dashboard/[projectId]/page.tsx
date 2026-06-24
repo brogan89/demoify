@@ -7,6 +7,7 @@ import { isR2Configured } from "@/lib/r2";
 import { SongView, type VersionDTO } from "@/components/song-view";
 import { type CommentDTO } from "@/components/comments";
 import { UploadVersion } from "@/components/upload-version";
+import { DeleteSongButton } from "@/components/delete-song-button";
 
 export default async function ProjectPage({
   params,
@@ -62,12 +63,15 @@ export default async function ProjectPage({
       <div className="mb-6">
         <div className="flex items-center justify-between gap-4">
           <h1 className="text-2xl font-semibold">{project.title}</h1>
-          <Link
-            href={publicPath}
-            className="flex items-center gap-1 text-sm text-primary underline-offset-4 hover:underline"
-          >
-            View public page <ExternalLink className="size-3.5" />
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              href={publicPath}
+              className="flex items-center gap-1 text-sm text-primary underline-offset-4 hover:underline"
+            >
+              View public page <ExternalLink className="size-3.5" />
+            </Link>
+            <DeleteSongButton projectId={project.id} />
+          </div>
         </div>
         {project.description && (
           <p className="mt-1 text-sm text-muted-foreground">{project.description}</p>
