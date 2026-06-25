@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Disc3, HandCoins, Heart, History, Link2, MessageSquare } from "lucide-react";
+import { Disc3, HandCoins, Heart, History, Link2, MessageSquare, Server } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WaveformBars } from "@/components/waveform";
 
@@ -100,6 +100,28 @@ export default function Home() {
           </p>
           <Button asChild size="lg" className="mt-5">
             <Link href="/explore">Find an artist to support</Link>
+          </Button>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-2xl pb-20 text-center">
+        <div className="rounded-lg border bg-card p-8">
+          <Server className="mx-auto mb-3 size-6 text-primary" />
+          <h2 className="text-xl font-semibold">Run your own Demoify</h2>
+          <p className="mx-auto mt-2 max-w-prose text-sm text-muted-foreground">
+            Demoify is open source — you can host it yourself. Bring your own storage and
+            switch off upload credits entirely, so uploads are{" "}
+            <strong className="text-foreground">free and unlimited</strong>. You can even
+            federate your public tracks into this shared Explore feed.
+          </p>
+          <Button asChild size="lg" variant="outline" className="mt-5">
+            <a
+              href="https://github.com/brogan89/demoify#self-hosting"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Self-hosting guide
+            </a>
           </Button>
         </div>
       </section>

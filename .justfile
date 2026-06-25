@@ -4,8 +4,8 @@
 default:
     @just --list
 
-# One-shot dev setup: install deps, create .env, start the DB, generate client, run migrations.
-setup: install env db generate migrate
+# One-shot dev setup: install deps, create .env, generate client, apply local D1 migrations.
+setup: install env generate migrate
     @echo "Setup complete. Run 'just run' to start the dev server."
 
 # Install dependencies.
@@ -28,9 +28,13 @@ db-stop:
 generate:
     npx prisma generate
 
-# Create and apply database migrations.
+# Apply D1 migrations to the local (emulated) database.
 migrate:
-    npx prisma migrate dev
+    npx wrangler d1 migrations apply demoify --local
+
+# Apply D1 migrations to the remote (production) database.
+migrate-remote:
+    npx wrangler d1 migrations apply demoify --remote
 
 # Start the dev server (http://localhost:3000).
 run:
