@@ -128,6 +128,11 @@ Or push to `main` and let GitHub Actions do it (see below).
 
 The CI workflow skips (stays green) until both are present, then migrates D1 + deploys.
 
+Each successful deploy is versioned `vYYYY.MM.DD-<run#>`: the value is baked into the
+build (shown in the site footer, linking to the matching tag) and pushed back as an
+annotated git tag on the deployed commit. This needs `permissions: contents: write`
+(already set in the workflow) so the default `GITHUB_TOKEN` can push the tag.
+
 ---
 
 ## Local preview before shipping

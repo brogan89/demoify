@@ -10,6 +10,10 @@ concurrency:
   group: deploy-production
   cancel-in-progress: false
 
+# Needed to push the release tag back to the repo.
+permissions:
+  contents: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -31,6 +35,13 @@ jobs:
             exit 1
           fi
           echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      # One version per deploy: date + the monotonic run number (e.g. v2026.06.26-42).
+      # Baked into the build (footer) and used as the git tag after a clean deploy.
+      - name: Compute version
+        if: steps.gate.outputs.ready == 'true'
+        id: version
+        run: echo "version=v$(date -u +'%Y.%m.%d')-${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@v4
         if: steps.gate.outputs.ready == 'true'
@@ -55,6 +66,19 @@ jobs:
         # BETTER_AUTH_SECRET is surfaced to the build so better-auth doesn't fall
         # back to its default secret while collecting page data. The worker's
         # runtime copy is set separately via `wrangler secret put` (see DEPLOYMENT.md).
+        # NEXT_PUBLIC_APP_VERSION is inlined into the bundle and shown in the footer.
         env:
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          NEXT_PUBLIC_APP_VERSION: ${{ steps.version.outputs.version }}
         run: npm run deploy
+
+      # Tag the deployed commit with the same version now that the deploy succeeded.
+      - name: Tag release
+        if: steps.gate.outputs.ready == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$VERSION" -m "Release $VERSION"
+          git push origin "$VERSION"

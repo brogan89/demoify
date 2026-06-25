@@ -1,8 +1,33 @@
-# Demoify
+<div align="center">
 
-GitHub for songs — share versioned demos, gate uploads behind credits, and let
-bands collaborate. Built with [Next.js](https://nextjs.org), Prisma, Better
-Auth, Cloudflare R2, and Stripe.
+```
+██████╗ ███████╗███╗   ███╗ ██████╗ ██╗███████╗██╗   ██╗
+██╔══██╗██╔════╝████╗ ████║██╔═══██╗██║██╔════╝╚██╗ ██╔╝
+██║  ██║█████╗  ██╔████╔██║██║   ██║██║█████╗   ╚████╔╝ 
+██║  ██║██╔══╝  ██║╚██╔╝██║██║   ██║██║██╔══╝    ╚██╔╝  
+██████╔╝███████╗██║ ╚═╝ ██║╚██████╔╝██║██║        ██║   
+╚═════╝ ╚══════╝╚═╝     ╚═╝ ╚═════╝ ╚═╝╚═╝        ╚═╝   
+```
+
+### GitHub for songs — share versioned demos, get feedback, and let bands collaborate.
+
+[![Deploy](https://github.com/brogan89/demoify/actions/workflows/deploy.yml/badge.svg)](https://github.com/brogan89/demoify/actions/workflows/deploy.yml)
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=nextdotjs&logoColor=white)](https://nextjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Prisma](https://img.shields.io/badge/Prisma-7-2D3748?style=flat-square&logo=prisma&logoColor=white)](https://www.prisma.io)
+[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?style=flat-square&logo=cloudflare&logoColor=white)](https://workers.cloudflare.com)
+[![Better Auth](https://img.shields.io/badge/Better%20Auth-1.x-7C3AED?style=flat-square)](https://www.better-auth.com)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-22C55E?style=flat-square)](https://github.com/brogan89/demoify/issues)
+
+</div>
+
+---
+
+**Demoify** lets artists and producers share tracks — publicly or privately — under
+one permanent link, push new versions without breaking that link, and collect
+feedback right in the comments. Self-host your own instance and even federate your
+public tracks into a shared [Explore](#federated-explore) feed. Built with
+[Next.js](https://nextjs.org), Prisma, Better Auth, Cloudflare R2, and Stripe.
 
 ## Dev setup
 
