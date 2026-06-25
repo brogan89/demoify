@@ -112,8 +112,16 @@ export default function Home() {
             early development — so expect rough edges as it grows.
           </p>
           <p className="mt-3 text-sm text-muted-foreground">
-            Have feedback or found a bug? Open an issue on GitHub — I&rsquo;d love
-            to hear it.
+            Have feedback or found a bug?{" "}
+            <a
+              href="https://github.com/brogan89/demoify/issues"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              Open an issue on GitHub
+            </a>{" "}
+            — I&rsquo;d love to hear it.
           </p>
         </div>
       </section>
