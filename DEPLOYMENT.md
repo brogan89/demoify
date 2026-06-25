@@ -71,8 +71,14 @@ satisfy by default.
 ## 5. Stripe (live)
 
 1. Switch to live mode, copy the live `STRIPE_SECRET_KEY`.
-2. Add a webhook endpoint → `https://demoify.app/api/credits/webhook`, event
-   `checkout.session.completed`. Copy the signing secret → `STRIPE_WEBHOOK_SECRET`.
+2. Add a webhook endpoint → `https://demoify.app/api/credits/webhook`, events
+   `checkout.session.completed` **and** `account.updated`. Copy the signing
+   secret → `STRIPE_WEBHOOK_SECRET`.
+3. **Tipping (artist payouts):** enable **Connect → Express** in the Stripe
+   dashboard and set your platform branding. The `account.updated` event above is
+   what flips an artist to "payouts enabled". Full design + setup + test steps:
+   [`docs/tipping.md`](docs/tipping.md). No extra secrets — tips reuse
+   `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`.
 
 ## 6. Worker secrets
 
@@ -129,4 +135,5 @@ you change the schema, re-run `npx wrangler d1 migrations apply demoify --local`
 - [ ] Password reset email arrives and completes.
 - [ ] Upload an MP3 → plays back from `cdn.demoify.app`.
 - [ ] Stripe checkout → credits increment (webhook 200).
+- [ ] Stripe Connect enabled; artist `/dashboard/payouts` onboarding → `account.updated` flips payouts on; test tip splits 90/10 (see `docs/tipping.md`).
 - [ ] Push to `main` → Actions deploys cleanly.

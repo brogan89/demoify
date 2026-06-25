@@ -104,11 +104,18 @@ model Band {
   bio         String?
   // Credits balance. New bands start with enough for 10 free uploads (STARTING_CREDITS).
   credits     Int      @default(100)
+  // Stripe Connect (Express) account that receives tips for this artist. Null
+  // until the band sets up payouts. `payoutsEnabled` caches whether that account
+  // can actually receive money (charges + payouts enabled), refreshed by the
+  // Stripe `account.updated` webhook so we don't hit the API on every page.
+  stripeAccountId String?
+  payoutsEnabled  Boolean @default(false)
   createdAt   DateTime @default(now())
 
   memberships  BandMembership[]
   projects     SongProject[]
   transactions CreditTransaction[]
+  tips         Tip[]
 
   @@map("band")
 }
@@ -195,6 +202,31 @@ model CreditTransaction {
   @@unique([userId, reason, refId])
   @@index([bandId])
   @@map("credit_transaction")
+}
+
+// A real-money tip from a user to an artist (Band), paid via Stripe Connect with
+// a 90/10 split: 90% transfers to the artist's connected account, 10% is the
+// platform application fee. Stripe moves the money — this row is the receipt /
+// history and the idempotency guard for the webhook (unique stripeSessionId).
+model Tip {
+  id              String   @id @default(cuid())
+  // Recipient artist.
+  bandId          String
+  band            Band     @relation(fields: [bandId], references: [id], onDelete: Cascade)
+  // Who tipped (login required to tip; nullable so a deleted user doesn't break history).
+  tipperUserId    String?
+  // The song the tip was sent from, for context (optional).
+  projectId       String?
+  amountCents     Int // gross amount charged
+  feeCents        Int // platform's 10%
+  artistCents     Int // artist's 90%
+  currency        String   @default("usd")
+  status          String   @default("pending") // "pending" | "paid"
+  stripeSessionId String?  @unique
+  createdAt       DateTime @default(now())
+
+  @@index([bandId])
+  @@map("tip")
 }
 
 model SongVersion {

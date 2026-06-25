@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ExternalLink, Users } from "lucide-react";
+import { Banknote, ExternalLink, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { getActiveBand, canManageMembers, canManageSongs, type Role } from "@/lib/band";
@@ -61,6 +62,20 @@ export default async function BandPage() {
             initialBio={profile?.bio ?? ""}
             initialAvatarUrl={profile?.avatarUrl ?? null}
           />
+        </section>
+      )}
+
+      {canManageMembers(active.role) && (
+        <section className="mb-8">
+          <h2 className="mb-1 text-sm font-medium">Tips &amp; payouts</h2>
+          <p className="mb-3 text-sm text-muted-foreground">
+            Set up payouts to let listeners tip this artist.
+          </p>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/dashboard/payouts">
+              <Banknote className="size-3.5" /> Manage tips &amp; payouts
+            </Link>
+          </Button>
         </section>
       )}
 

@@ -8,6 +8,8 @@ import { getMembership, isMember } from "@/lib/band";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { SongCard } from "@/components/song-card";
+import { TipButton } from "@/components/tip-button";
+import { TipResultToast } from "@/components/tip-result-toast";
 
 function initials(name: string): string {
   return name.slice(0, 2).toUpperCase();
@@ -57,6 +59,7 @@ export default async function ArtistProfilePage({
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
+      <TipResultToast bandName={band.displayName} />
       <header className="mb-8 flex items-start gap-4">
         <Avatar className="size-16">
           {band.avatarUrl && <AvatarImage src={band.avatarUrl} alt="" />}
@@ -68,13 +71,22 @@ export default async function ArtistProfilePage({
               <h1 className="truncate text-2xl font-semibold">{band.displayName}</h1>
               <p className="font-mono text-xs text-muted-foreground">demoify.app/{band.username}</p>
             </div>
-            {isMember(role) && (
-              <Button asChild variant="outline" size="sm">
-                <Link href="/dashboard/band">
-                  <Pencil className="size-3.5" /> Edit profile
-                </Link>
-              </Button>
-            )}
+            <div className="flex shrink-0 items-center gap-2">
+              <TipButton
+                bandId={band.id}
+                bandDisplayName={band.displayName}
+                returnPath={`/${band.username}`}
+                isAuthed={Boolean(currentUser)}
+                canTip={band.payoutsEnabled && !isMember(role)}
+              />
+              {isMember(role) && (
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/dashboard/band">
+                    <Pencil className="size-3.5" /> Edit profile
+                  </Link>
+                </Button>
+              )}
+            </div>
           </div>
           {band.bio && <p className="mt-3 max-w-prose text-sm text-muted-foreground">{band.bio}</p>}
         </div>

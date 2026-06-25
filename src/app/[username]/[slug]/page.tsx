@@ -9,12 +9,16 @@ import { SongView, type VersionDTO } from "@/components/song-view";
 import { type CommentDTO } from "@/components/comments";
 import { ShareLink } from "@/components/share-link";
 import { LikeButton } from "@/components/like-button";
+import { TipButton } from "@/components/tip-button";
+import { TipResultToast } from "@/components/tip-result-toast";
 
 async function getProject(username: string, slug: string) {
   return prisma.songProject.findFirst({
     where: { slug, band: { username } },
     include: {
-      band: { select: { id: true, username: true, displayName: true } },
+      band: {
+        select: { id: true, username: true, displayName: true, payoutsEnabled: true },
+      },
       _count: { select: { likes: true } },
       versions: { orderBy: { versionNumber: "desc" } },
       comments: {
@@ -133,6 +137,8 @@ export default async function PublicSongPage({
         </div>
       </div>
 
+      <TipResultToast bandName={project.band.displayName} />
+
       <div className="mb-6 flex items-center gap-3">
         <ShareLink path={`${project.band.username}/${slug}`} />
         {!isPrivate && (
@@ -141,6 +147,16 @@ export default async function PublicSongPage({
             initialLiked={likedByUser}
             initialCount={project._count.likes}
             isAuthed={Boolean(currentUser)}
+          />
+        )}
+        {!isPrivate && (
+          <TipButton
+            bandId={project.band.id}
+            bandDisplayName={project.band.displayName}
+            projectId={project.id}
+            returnPath={`/${project.band.username}/${slug}`}
+            isAuthed={Boolean(currentUser)}
+            canTip={project.band.payoutsEnabled && !isMember(role)}
           />
         )}
       </div>

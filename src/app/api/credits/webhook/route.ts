@@ -28,9 +28,11 @@ export async function POST(req: Request) {
     const session = event.data.object as Stripe.Checkout.Session;
     const bandId = session.metadata?.bandId;
     const credits = Number(session.metadata?.credits ?? 0);
+    const isTip = session.metadata?.kind === "tip";
 
     if (bandId && credits > 0 && session.payment_status === "paid") {
-      // Idempotent: the unique stripeSessionId means a replayed event is a no-op.
+      // Credit purchase. Idempotent: the unique stripeSessionId means a replayed
+      // event is a no-op.
       try {
         await prisma.$transaction([
           prisma.creditTransaction.create({
@@ -50,7 +52,36 @@ export async function POST(req: Request) {
         // P2002 = unique violation on stripeSessionId = already processed (replay).
         if ((err as { code?: string }).code !== "P2002") throw err;
       }
+    } else if (bandId && isTip && session.payment_status === "paid") {
+      // Tip. Stripe already split + transferred the money via the destination
+      // charge; we just record the receipt. Idempotent on stripeSessionId.
+      const m = session.metadata ?? {};
+      try {
+        await prisma.tip.create({
+          data: {
+            bandId,
+            tipperUserId: m.tipperUserId || null,
+            projectId: m.projectId || null,
+            amountCents: Number(m.amountCents ?? 0),
+            feeCents: Number(m.feeCents ?? 0),
+            artistCents: Number(m.artistCents ?? 0),
+            currency: session.currency ?? "usd",
+            status: "paid",
+            stripeSessionId: session.id,
+          },
+        });
+      } catch (err) {
+        if ((err as { code?: string }).code !== "P2002") throw err;
+      }
     }
+  } else if (event.type === "account.updated") {
+    // A connected artist's account changed — refresh whether it can take tips.
+    const account = event.data.object as Stripe.Account;
+    const enabled = Boolean(account.charges_enabled && account.payouts_enabled);
+    await prisma.band.updateMany({
+      where: { stripeAccountId: account.id },
+      data: { payoutsEnabled: enabled },
+    });
   }
 
   return NextResponse.json({ received: true });

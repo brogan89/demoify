@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Disc3, Heart, History, Link2, Mail, MessageSquare } from "lucide-react";
+import { Disc3, HandCoins, Heart, History, Link2, Mail, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WaveformBars } from "@/components/waveform";
 
@@ -87,6 +87,21 @@ export default function Home() {
             <p className="mt-1 text-sm text-muted-foreground">{f.body}</p>
           </div>
         ))}
+      </section>
+
+      <section className="mx-auto max-w-2xl pb-20 text-center">
+        <div className="rounded-lg border bg-card p-8">
+          <HandCoins className="mx-auto mb-3 size-6 text-primary" />
+          <h2 className="text-xl font-semibold">Support your favorite artists</h2>
+          <p className="mx-auto mt-2 max-w-prose text-sm text-muted-foreground">
+            Love a track? Send the artist a tip. <strong className="text-foreground">90% goes
+            straight to the artist</strong> and 10% keeps Demoify running — so a thank-you to
+            them is a thank-you to us too. 💜
+          </p>
+          <Button asChild size="lg" className="mt-5">
+            <Link href="/explore">Find an artist to support</Link>
+          </Button>
+        </div>
       </section>
 
       <section className="mx-auto max-w-2xl pb-20 text-center">
