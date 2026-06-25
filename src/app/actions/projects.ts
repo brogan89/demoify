@@ -8,6 +8,7 @@ import { getCurrentUser } from "@/lib/session";
 import { getActiveBand, getMembership, canManageSongs } from "@/lib/band";
 import { isR2Configured, r2, R2_BUCKET } from "@/lib/r2";
 import { slugify, uniqueSlug } from "@/lib/slug";
+import { normalizeGenre } from "@/lib/genres";
 
 export async function createProject(formData: FormData) {
   const user = await getCurrentUser();
@@ -21,6 +22,11 @@ export async function createProject(formData: FormData) {
   const description = String(formData.get("description") ?? "").trim() || null;
   if (!title) return;
 
+  const { genre, subgenre } = normalizeGenre(
+    formData.get("genre")?.toString(),
+    formData.get("subgenre")?.toString(),
+  );
+
   const existing = await prisma.songProject.findMany({
     where: { bandId: active.band.id },
     select: { slug: true },
@@ -28,7 +34,7 @@ export async function createProject(formData: FormData) {
   const slug = uniqueSlug(slugify(title), new Set(existing.map((p) => p.slug)));
 
   const project = await prisma.songProject.create({
-    data: { bandId: active.band.id, ownerId: user.id, title, description, slug },
+    data: { bandId: active.band.id, ownerId: user.id, title, description, slug, genre, subgenre },
   });
 
   revalidatePath("/dashboard");
@@ -109,6 +115,36 @@ export async function setSongVisibility(
   if (!canManageSongs(role)) return { error: "Not allowed" };
 
   await prisma.songProject.update({ where: { id: projectId }, data: { visibility } });
+
+  revalidatePath(`/dashboard/${projectId}`);
+  revalidatePath(`/${project.band.username}/${project.slug}`);
+  return { ok: true };
+}
+
+export async function setSongGenre(
+  projectId: string,
+  rawGenre: string | null,
+  rawSubgenre: string | null,
+) {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const project = await prisma.songProject.findUnique({
+    where: { id: projectId },
+    include: { band: { select: { username: true } } },
+  });
+  if (!project) return { error: "Song not found" };
+
+  const role = await getMembership(project.bandId, user.id);
+  if (!canManageSongs(role)) return { error: "Not allowed" };
+
+  // normalizeGenre clears an invalid/unknown genre and drops a subgenre that
+  // doesn't belong to the chosen genre.
+  const { genre, subgenre } = normalizeGenre(rawGenre, rawSubgenre);
+  await prisma.songProject.update({
+    where: { id: projectId },
+    data: { genre, subgenre },
+  });
 
   revalidatePath(`/dashboard/${projectId}`);
   revalidatePath(`/${project.band.username}/${project.slug}`);

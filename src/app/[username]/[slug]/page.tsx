@@ -124,6 +124,12 @@ export default async function PublicSongPage({
               {project.description}
             </p>
           )}
+          {project.genre && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {project.genre}
+              {project.subgenre ? ` · ${project.subgenre}` : ""}
+            </p>
+          )}
         </div>
       </div>
 

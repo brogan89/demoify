@@ -10,6 +10,7 @@ import { type CommentDTO } from "@/components/comments";
 import { UploadVersion } from "@/components/upload-version";
 import { DeleteSongButton } from "@/components/delete-song-button";
 import { VisibilityToggle } from "@/components/visibility-toggle";
+import { GenreEditor } from "@/components/genre-editor";
 
 export default async function ProjectPage({
   params,
@@ -89,6 +90,22 @@ export default async function ProjectPage({
         <p className="mt-2 font-mono text-xs text-muted-foreground">
           demoify.app{publicPath}
         </p>
+        {canManage ? (
+          <div className="mt-4">
+            <GenreEditor
+              projectId={project.id}
+              genre={project.genre}
+              subgenre={project.subgenre}
+            />
+          </div>
+        ) : (
+          project.genre && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {project.genre}
+              {project.subgenre ? ` · ${project.subgenre}` : ""}
+            </p>
+          )
+        )}
       </div>
 
       {canManage && (

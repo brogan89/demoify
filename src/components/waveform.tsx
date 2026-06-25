@@ -164,7 +164,10 @@ export function WaveformBars({
           className={`min-h-[2px] flex-1 rounded-full ${
             i < playedBars ? "bg-primary" : "bg-muted-foreground/40"
           }`}
-          style={{ height: `${Math.max(6, p * 100)}%` }}
+          // Round to 2 decimals so tiny Math.sin/cos differences between the
+          // server and browser don't produce mismatched height strings (which
+          // would trip React hydration on the home hero waveform).
+          style={{ height: `${Math.max(6, p * 100).toFixed(2)}%` }}
         />
       ))}
     </div>

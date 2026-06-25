@@ -14,17 +14,19 @@ export default function Home() {
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
             Share your music with one link.
           </h1>
-          <p className="max-w-prose text-lg text-muted-foreground">
-            Demoify is the simple way for artists to share tracks, publicly or privately, and update the track with a new version but keep the same link.
-            <br></br>
-            <br></br>
-            <b><h1>For Artists</h1></b>
-            Bands can share demos and get feedback from other band members.
-            <br></br>
-            <br></br>
-            <b><h1>For Producers</h1></b>
-            Producers can drop mixes and masters and collect feedback right in the comments
-          </p>
+          <div className="max-w-prose space-y-4 text-lg text-muted-foreground">
+            <p>
+              Demoify is the simple way for artists to share tracks, publicly or privately, and update the track with a new version but keep the same link.
+            </p>
+            <div>
+              <h2 className="font-bold text-foreground">For Artists</h2>
+              <p>Bands can share demos and get feedback from other band members.</p>
+            </div>
+            <div>
+              <h2 className="font-bold text-foreground">For Producers</h2>
+              <p>Producers can drop mixes and masters and collect feedback right in the comments.</p>
+            </div>
+          </div>
           <div className="flex gap-3">
             <Button asChild size="lg">
               <Link href="/signup">Get started</Link>

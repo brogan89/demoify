@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { Input } from "@/components/ui/input";
 import { SongCard } from "@/components/song-card";
+import { ExploreFilters } from "@/components/explore-filters";
+import { normalizeGenre } from "@/lib/genres";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -17,11 +19,15 @@ type Sort = "recent" | "popular";
 export default async function ExplorePage({
   searchParams,
 }: {
-  searchParams: Promise<{ sort?: string; q?: string }>;
+  searchParams: Promise<{ sort?: string; q?: string; genre?: string; subgenre?: string }>;
 }) {
-  const { sort: sortParam, q: qParam } = await searchParams;
+  const { sort: sortParam, q: qParam, genre: genreParam, subgenre: subgenreParam } =
+    await searchParams;
   const sort: Sort = sortParam === "popular" ? "popular" : "recent";
   const q = (qParam ?? "").trim();
+  // Validate the filter against the curated taxonomy; an unknown genre clears
+  // the filter, and a subgenre that doesn't belong to the genre is dropped.
+  const { genre, subgenre } = normalizeGenre(genreParam, subgenreParam);
   const user = await getCurrentUser();
   // Empty id matches no rows, so logged-out users get liked=false everywhere.
   const viewerId = user?.id ?? "";
@@ -30,6 +36,8 @@ export default async function ExplorePage({
     where: {
       visibility: "PUBLIC",
       versions: { some: {} },
+      ...(genre ? { genre } : {}),
+      ...(subgenre ? { subgenre } : {}),
       // Match the query against the song title or the band's name/handle.
       // SQLite `contains` (LIKE) is case-insensitive for ASCII.
       ...(q
@@ -64,28 +72,35 @@ export default async function ExplorePage({
           </p>
         </div>
         <div className="flex gap-1 rounded-full border p-1 text-sm">
-          <SortTab current={sort} value="recent" label="Recent" q={q} />
-          <SortTab current={sort} value="popular" label="Popular" q={q} />
+          <SortTab current={sort} value="recent" label="Recent" q={q} genre={genre} subgenre={subgenre} />
+          <SortTab current={sort} value="popular" label="Popular" q={q} genre={genre} subgenre={subgenre} />
         </div>
       </div>
 
-      <form action="/explore" className="relative mb-6">
-        {/* Preserve the active sort when submitting a search. */}
-        <input type="hidden" name="sort" value={sort} />
-        <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          name="q"
-          type="search"
-          defaultValue={q}
-          placeholder="Search songs or bands…"
-          className="pl-8"
-          aria-label="Search songs or bands"
-        />
-      </form>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <form action="/explore" className="relative flex-1">
+          {/* Preserve the active sort and genre filter when submitting a search. */}
+          <input type="hidden" name="sort" value={sort} />
+          {genre && <input type="hidden" name="genre" value={genre} />}
+          {subgenre && <input type="hidden" name="subgenre" value={subgenre} />}
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            name="q"
+            type="search"
+            defaultValue={q}
+            placeholder="Search songs or bands…"
+            className="pl-8"
+            aria-label="Search songs or bands"
+          />
+        </form>
+        <ExploreFilters sort={sort} q={q} genre={genre ?? ""} subgenre={subgenre ?? ""} />
+      </div>
 
       {songs.length === 0 ? (
         <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-          {q ? `No public songs match "${q}".` : "No public songs yet."}
+          {q || genre
+            ? "No public songs match these filters."
+            : "No public songs yet."}
         </p>
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -116,15 +131,21 @@ function SortTab({
   value,
   label,
   q,
+  genre,
+  subgenre,
 }: {
   current: Sort;
   value: Sort;
   label: string;
   q: string;
+  genre: string | null;
+  subgenre: string | null;
 }) {
   const active = current === value;
   const params = new URLSearchParams({ sort: value });
   if (q) params.set("q", q);
+  if (genre) params.set("genre", genre);
+  if (subgenre) params.set("subgenre", subgenre);
   return (
     <Link
       href={`/explore?${params.toString()}`}

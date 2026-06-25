@@ -142,6 +142,10 @@ model SongProject {
   description String?
   // "PUBLIC" (anyone can view) | "PRIVATE" (band members only).
   visibility  String   @default("PUBLIC")
+  // Optional curated genre + subgenre (see src/lib/genres.ts). Powers the Explore
+  // filter. Stored denormalized since the option list is a fixed, curated set.
+  genre       String?
+  subgenre    String?
   createdAt   DateTime @default(now())
   // Lifetime plays, counted per song URL so they survive new version uploads.
   playCount   Int      @default(0)
@@ -152,6 +156,7 @@ model SongProject {
 
   // Permanent URL is /[username]/[slug] — slug unique per band
   @@unique([bandId, slug])
+  @@index([genre])
   @@map("song_project")
 }
 
