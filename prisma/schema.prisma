@@ -229,6 +229,58 @@ model Tip {
   @@map("tip")
 }
 
+// ---------------------------------------------------------------------------
+// Federation — sharing public tracks across self-hosted instances.
+//
+// A "hub" instance (e.g. demoify.app) accepts track submissions from registered
+// self-hosted instances and surfaces approved ones in its Explore feed. Only
+// metadata is stored: the audio and the song/artist pages live on the origin
+// instance's own storage and site, so nothing is copied or re-hosted here.
+// These tables are inert unless FEDERATION_HUB_ENABLED is set.
+// ---------------------------------------------------------------------------
+
+// A self-hosted instance permitted to submit tracks to this hub. Provisioned by
+// the hub operator (see scripts/federation.ts), which stores only the SHA-256 of
+// the shared submission token.
+model FederatedInstance {
+  id        String   @id @default(cuid())
+  name      String
+  baseUrl   String   @unique // origin URL, e.g. https://music.example.com
+  tokenHash String // sha-256 hex of the bearer token used to authenticate submissions
+  trusted   Boolean  @default(false) // true → submissions auto-approve; else land as "pending"
+  createdAt DateTime @default(now())
+
+  tracks ExternalTrack[]
+
+  @@map("federated_instance")
+}
+
+// A public track mirrored from a federated instance. `audioUrl`/`trackUrl`/
+// `artistUrl` are absolute URLs on the origin; play counts and like counts are
+// periodically-refreshed snapshots (this hub has no local engagement for them).
+model ExternalTrack {
+  id          String            @id @default(cuid())
+  instanceId  String
+  instance    FederatedInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  remoteId    String // the SongProject id on the origin instance
+  title       String
+  artistName  String
+  artistUrl   String // origin artist profile URL
+  trackUrl    String // origin song page URL
+  audioUrl    String // absolute audio URL on origin storage
+  genre       String?
+  subgenre    String?
+  status      String   @default("pending") // "pending" | "approved" | "rejected"
+  playCount   Int      @default(0) // snapshot from origin
+  likeCount   Int      @default(0) // snapshot from origin
+  submittedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([instanceId, remoteId])
+  @@index([status, genre])
+  @@map("external_track")
+}
+
 model SongVersion {
   id            String      @id @default(cuid())
   projectId     String

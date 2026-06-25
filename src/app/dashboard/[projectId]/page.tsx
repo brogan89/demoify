@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { getMembership, canManageSongs, isMember } from "@/lib/band";
 import { isR2Configured } from "@/lib/r2";
+import { creditsEnabled } from "@/lib/credits";
 import { SongView, type VersionDTO } from "@/components/song-view";
 import { type CommentDTO } from "@/components/comments";
 import { UploadVersion } from "@/components/upload-version";
@@ -115,6 +116,7 @@ export default async function ProjectPage({
             projectId={project.id}
             uploadsEnabled={isR2Configured()}
             credits={project.band.credits}
+            creditsRequired={creditsEnabled()}
           />
         </div>
       )}

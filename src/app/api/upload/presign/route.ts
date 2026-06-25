@@ -6,7 +6,7 @@ import { getCurrentUser } from "@/lib/session";
 import { getMembership, canManageSongs } from "@/lib/band";
 import { prisma } from "@/lib/db";
 import { isR2Configured, r2, R2_BUCKET, publicUrlFor } from "@/lib/r2";
-import { UPLOAD_COST } from "@/lib/credits";
+import { UPLOAD_COST, creditsEnabled } from "@/lib/credits";
 
 const ALLOWED_AUDIO = new Set(["audio/mpeg", "audio/wav", "audio/x-wav", "audio/wave"]);
 const ALLOWED_IMAGE = new Set(["image/png", "image/jpeg", "image/webp"]);
@@ -92,15 +92,18 @@ export async function POST(req: Request) {
 
   // Fail before the upload if the band's balance can't cover it. Credits are
   // actually charged atomically when the version is created (see createVersion).
-  const band = await prisma.band.findUnique({
-    where: { id: project.bandId },
-    select: { credits: true },
-  });
-  if (!band || band.credits < UPLOAD_COST) {
-    return NextResponse.json(
-      { error: `Not enough credits. Each upload costs ${UPLOAD_COST} credits.`, code: "INSUFFICIENT_CREDITS" },
-      { status: 402 },
-    );
+  // Skipped entirely when the credit economy is disabled (self-hosting).
+  if (creditsEnabled()) {
+    const band = await prisma.band.findUnique({
+      where: { id: project.bandId },
+      select: { credits: true },
+    });
+    if (!band || band.credits < UPLOAD_COST) {
+      return NextResponse.json(
+        { error: `Not enough credits. Each upload costs ${UPLOAD_COST} credits.`, code: "INSUFFICIENT_CREDITS" },
+        { status: 402 },
+      );
+    }
   }
 
   return presignTo(`songs/${projectId}/${randomUUID()}.${extFor(contentType, fileName)}`, contentType);

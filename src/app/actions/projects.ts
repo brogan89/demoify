@@ -9,6 +9,7 @@ import { getActiveBand, getMembership, canManageSongs } from "@/lib/band";
 import { isR2Configured, r2, R2_BUCKET } from "@/lib/r2";
 import { slugify, uniqueSlug } from "@/lib/slug";
 import { normalizeGenre } from "@/lib/genres";
+import { syncTrack, removeTrack } from "@/lib/federation";
 
 export async function createProject(formData: FormData) {
   const user = await getCurrentUser();
@@ -76,6 +77,9 @@ export async function deleteProject(projectId: string) {
   // Versions and comments cascade-delete via the schema's onDelete: Cascade.
   await prisma.songProject.delete({ where: { id: projectId } });
 
+  // Drop any mirror of this song from the federation hub.
+  await removeTrack(projectId);
+
   revalidatePath("/dashboard");
   revalidatePath(`/${project.band.username}/${project.slug}`);
   return { ok: true };
@@ -116,6 +120,10 @@ export async function setSongVisibility(
 
   await prisma.songProject.update({ where: { id: projectId }, data: { visibility } });
 
+  // Mirror to / remove from the federation hub. syncTrack itself removes when the
+  // song isn't publicly playable, so it handles the PRIVATE case too.
+  await syncTrack(projectId);
+
   revalidatePath(`/dashboard/${projectId}`);
   revalidatePath(`/${project.band.username}/${project.slug}`);
   return { ok: true };
@@ -145,6 +153,9 @@ export async function setSongGenre(
     where: { id: projectId },
     data: { genre, subgenre },
   });
+
+  // Keep the hub mirror's genre in sync (no-op unless public + federated).
+  await syncTrack(projectId);
 
   revalidatePath(`/dashboard/${projectId}`);
   revalidatePath(`/${project.band.username}/${project.slug}`);

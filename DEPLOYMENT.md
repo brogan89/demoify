@@ -103,6 +103,16 @@ npx wrangler secret put GOOGLE_CLIENT_SECRET
 `BETTER_AUTH_URL` is a plain var in `wrangler.jsonc` (not a secret). The database needs no
 secret — D1 is a binding.
 
+### Optional vars — credits & federation
+
+- `CREDITS_ENABLED` — leave unset/`"true"` for demoify.app (credits on). A self-hosted
+  fork that wants free uploads sets it to `"false"` (a plain var in `wrangler.jsonc` is fine).
+- **Run demoify.app as a federation hub** so self-hosted instances appear in Explore: set
+  `FEDERATION_HUB_ENABLED="true"` (plain var). Register each instance and mint its token with
+  `just federation …` locally, or insert into D1 via `wrangler d1 execute` (see
+  [`docs/federation.md`](docs/federation.md)). No shared secret is stored in config — each
+  instance's token hash lives in the `federated_instance` table.
+
 ## 7. First deploy
 
 Locally:

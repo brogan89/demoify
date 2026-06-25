@@ -3,12 +3,15 @@ import { Coins } from "lucide-react";
 import { getCurrentUser } from "@/lib/session";
 import { getActiveBand } from "@/lib/band";
 import { isStripeConfigured } from "@/lib/stripe";
-import { CREDIT_PACKAGES, UPLOAD_COST, uploadsRemaining } from "@/lib/credits";
+import { CREDIT_PACKAGES, UPLOAD_COST, uploadsRemaining, creditsEnabled } from "@/lib/credits";
 import { BuyCredits } from "@/components/buy-credits";
 
 export default async function CreditsPage() {
   const sessionUser = await getCurrentUser();
   if (!sessionUser) redirect("/login");
+
+  // No credit economy on this instance (self-hosting) — nothing to show here.
+  if (!creditsEnabled()) redirect("/dashboard");
 
   const active = await getActiveBand();
   if (!active) redirect("/dashboard");

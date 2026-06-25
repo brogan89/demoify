@@ -15,6 +15,17 @@ export const STARTING_CREDITS = 100;
 export const UPLOAD_COST = 10;
 export const CREDITS_PER_USD = 100;
 
+/**
+ * Whether the credit economy is enforced. On by default (the hosted SaaS gates
+ * uploads behind credits); self-hosters set `CREDITS_ENABLED=false` to make
+ * uploads free and unlimited, since they pay for their own storage. When off,
+ * uploads aren't charged, engagement rewards aren't granted, and credit UI is
+ * hidden. (Stripe credit purchases are independently gated by `isStripeConfigured`.)
+ */
+export function creditsEnabled(): boolean {
+  return process.env.CREDITS_ENABLED !== "false";
+}
+
 // A new user's first artist gets STARTING_CREDITS (10 free uploads). Creating an
 // *additional* artist is free, but it starts with just one free upload's worth.
 export const NEW_ARTIST_CREDITS = UPLOAD_COST;

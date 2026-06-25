@@ -2,9 +2,15 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/session";
 import { getActiveBand } from "@/lib/band";
 import { isStripeConfigured, stripe, appUrl } from "@/lib/stripe";
-import { getPackage } from "@/lib/credits";
+import { getPackage, creditsEnabled } from "@/lib/credits";
 
 export async function POST(req: Request) {
+  if (!creditsEnabled()) {
+    return NextResponse.json(
+      { error: "The credit economy is disabled on this instance." },
+      { status: 503 },
+    );
+  }
   if (!isStripeConfigured()) {
     return NextResponse.json(
       { error: "Payments are not configured. Set STRIPE_SECRET_KEY." },

@@ -44,6 +44,11 @@ studio:
 users:
     node scripts/list-users.mjs
 
+# Federation hub admin (register/trust/approve instances). Run with no args for help.
+#   just federation add "Name" https://their-instance.example
+federation *ARGS:
+    node scripts/federation.mjs {{ARGS}}
+
 # Drop and recreate the database (destructive).
 reset:
     npx prisma migrate reset

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { getActiveBand, getMembership, isMember } from "@/lib/band";
-import { ENGAGEMENT_CREDITS, type EngagementReason } from "@/lib/credits";
+import { ENGAGEMENT_CREDITS, creditsEnabled, type EngagementReason } from "@/lib/credits";
 
 /**
  * Award engagement credits to the *engager's* active band for interacting with
@@ -18,6 +18,9 @@ export async function grantEngagementCredits(opts: {
   reason: EngagementReason;
 }): Promise<number> {
   const { engagerUserId, songBandId, projectId, reason } = opts;
+
+  // Nothing to grant when the credit economy is disabled (self-hosting).
+  if (!creditsEnabled()) return 0;
 
   // No credit for engaging your own band's songs.
   const ownRole = await getMembership(songBandId, engagerUserId);

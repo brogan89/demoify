@@ -41,7 +41,7 @@ export function BuyCredits({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not start checkout");
-      window.location.href = data.url; // hand off to Stripe Checkout
+      window.location.assign(data.url); // hand off to Stripe Checkout
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Checkout failed");
       setBusy(null);

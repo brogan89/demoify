@@ -4,9 +4,10 @@ import { Search } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { Input } from "@/components/ui/input";
-import { SongCard } from "@/components/song-card";
+import { SongCard, type SongCardData } from "@/components/song-card";
 import { ExploreFilters } from "@/components/explore-filters";
 import { normalizeGenre } from "@/lib/genres";
+import { federationHubEnabled } from "@/lib/federation";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -62,6 +63,66 @@ export default async function ExplorePage({
     },
   });
 
+  // Normalize local songs and (when this instance is a hub) approved federated
+  // tracks into one list, sorted together and capped at 50. Federated tracks
+  // link out to their origin instance — see SongCard.
+  type Entry = { card: SongCardData; recentAt: number; likes: number };
+  const localEntries: Entry[] = songs.map((s) => ({
+    card: {
+      id: s.id,
+      title: s.title,
+      slug: s.slug,
+      playCount: s.playCount,
+      likeCount: s._count.likes,
+      liked: s.likes.length > 0,
+      band: s.band,
+    },
+    recentAt: s.createdAt.getTime(),
+    likes: s._count.likes,
+  }));
+
+  let externalEntries: Entry[] = [];
+  if (federationHubEnabled()) {
+    const external = await prisma.externalTrack.findMany({
+      where: {
+        status: "approved",
+        ...(genre ? { genre } : {}),
+        ...(subgenre ? { subgenre } : {}),
+        ...(q
+          ? { OR: [{ title: { contains: q } }, { artistName: { contains: q } }] }
+          : {}),
+      },
+      orderBy:
+        sort === "popular"
+          ? [{ likeCount: "desc" }, { submittedAt: "desc" }]
+          : { submittedAt: "desc" },
+      take: 50,
+      include: { instance: { select: { name: true } } },
+    });
+    externalEntries = external.map((t) => ({
+      card: {
+        id: t.id,
+        title: t.title,
+        slug: "",
+        playCount: t.playCount,
+        likeCount: t.likeCount,
+        liked: false,
+        band: { username: "", displayName: t.artistName },
+        external: { trackUrl: t.trackUrl, artistUrl: t.artistUrl, originName: t.instance.name },
+      },
+      recentAt: t.submittedAt.getTime(),
+      likes: t.likeCount,
+    }));
+  }
+
+  const entries = [...localEntries, ...externalEntries]
+    .sort((a, b) =>
+      sort === "popular"
+        ? b.likes - a.likes || b.recentAt - a.recentAt
+        : b.recentAt - a.recentAt,
+    )
+    .slice(0, 50);
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
       <div className="mb-4 flex items-end justify-between gap-4">
@@ -96,7 +157,7 @@ export default async function ExplorePage({
         <ExploreFilters sort={sort} q={q} genre={genre ?? ""} subgenre={subgenre ?? ""} />
       </div>
 
-      {songs.length === 0 ? (
+      {entries.length === 0 ? (
         <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
           {q || genre
             ? "No public songs match these filters."
@@ -104,20 +165,9 @@ export default async function ExplorePage({
         </p>
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {songs.map((s) => (
-            <li key={s.id}>
-              <SongCard
-                song={{
-                  id: s.id,
-                  title: s.title,
-                  slug: s.slug,
-                  playCount: s.playCount,
-                  likeCount: s._count.likes,
-                  liked: s.likes.length > 0,
-                  band: s.band,
-                }}
-                isAuthed={Boolean(user)}
-              />
+          {entries.map(({ card }) => (
+            <li key={`${card.external ? "ext" : "loc"}-${card.id}`}>
+              <SongCard song={card} isAuthed={Boolean(user)} />
             </li>
           ))}
         </ul>

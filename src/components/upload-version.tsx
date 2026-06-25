@@ -22,12 +22,16 @@ export function UploadVersion({
   projectId,
   uploadsEnabled,
   credits,
+  creditsRequired = true,
 }: {
   projectId: string;
   uploadsEnabled: boolean;
   credits: number;
+  // When false (self-hosting with CREDITS_ENABLED=false), uploads are free —
+  // no cost label and no affordability gate.
+  creditsRequired?: boolean;
 }) {
-  const canAfford = credits >= UPLOAD_COST;
+  const canAfford = !creditsRequired || credits >= UPLOAD_COST;
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -114,10 +118,12 @@ export function UploadVersion({
 
   return (
     <form onSubmit={onSubmit} className="space-y-3 rounded-lg border p-4">
-      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Coins className="size-3.5" />
-        Costs {UPLOAD_COST} credits · you have {credits}
-      </p>
+      {creditsRequired && (
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Coins className="size-3.5" />
+          Costs {UPLOAD_COST} credits · you have {credits}
+        </p>
+      )}
       <div className="space-y-1.5">
         <Label htmlFor="audio">Audio file (MP3 or WAV)</Label>
         <input

@@ -47,11 +47,58 @@ the rest enable optional features and stay dormant until configured.
 | `NEXT_PUBLIC_APP_URL` | ✅ | Public app URL exposed to the browser. |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | — | Enables Google login. |
 | `APPLE_CLIENT_ID` / `APPLE_CLIENT_SECRET` | — | Enables Apple login. |
-| `R2_*` (5 vars) | — | Cloudflare R2 — enables song uploads. |
+| `R2_*` (5 vars) | — | Cloudflare R2 (or any S3-compatible store) — enables song uploads. |
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | — | Stripe — enables credit purchases. |
+| `CREDITS_ENABLED` | — | `false` makes uploads free/unlimited and hides credit UI (see Self-hosting). Defaults to `true`. |
+| `FEDERATION_HUB_URL` / `FEDERATION_TOKEN` | — | Submit this instance's public tracks to a shared Explore hub. |
+| `FEDERATION_HUB_ENABLED` | — | `true` makes this instance a hub that accepts submissions. |
 
 The app runs without the optional groups: social buttons, uploads, and
 purchases simply stay disabled until their credentials are present.
+
+## Self-hosting
+
+Demoify is designed to run as your own instance. The upload "credit" cost is
+purely a gate (there's no transcoding or AI behind it), so when you bring your
+own storage there's no per-upload cost to meter:
+
+- **Free, unlimited uploads** — set `CREDITS_ENABLED="false"`. Credits stop being
+  charged, engagement rewards stop accruing, and all credit UI (the balance pill,
+  the buy-credits page, upload cost labels) disappears. You can leave Stripe
+  unconfigured entirely.
+- **Bring your own storage** — uploads use the S3 API, so any S3-compatible store
+  works (Cloudflare R2, AWS S3, MinIO, Backblaze B2). Point the `R2_*` vars at it:
+  `R2_ACCOUNT_ID` builds the endpoint (`https://<id>.r2.cloudflarestorage.com`)
+  for R2; for other providers, adjust the endpoint in `src/lib/r2.ts`. `R2_BUCKET`
+  is the bucket and `R2_PUBLIC_URL` is the public base URL objects are served from.
+- **Database** — production runs on Cloudflare D1 (a Worker binding, no
+  connection string). See `DEPLOYMENT.md` for the full setup.
+
+### Federated Explore
+
+Your instance can share its public tracks with a central hub (e.g. `demoify.app`)
+so they show up in the hub's Explore feed alongside everyone else's. Only metadata
+is shared — audio keeps streaming from your own storage, and listeners click
+through to your instance to play.
+
+To join a hub: ask the hub operator for a token, then set `FEDERATION_HUB_URL` and
+`FEDERATION_TOKEN`. From then on, making a song public (or uploading a version to a
+public song) submits it to the hub; making it private or deleting it removes it.
+Submissions start as "pending" until the hub operator approves them.
+
+Running your own hub and the submission protocol are documented in
+[`docs/federation.md`](docs/federation.md).
+
+## Going public / rotating secrets
+
+Before exposing an instance (or open-sourcing a fork), rotate anything that ever
+lived in a local `.env`:
+
+- Regenerate `BETTER_AUTH_SECRET` — `openssl rand -base64 32`.
+- Rotate your storage keys (`R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY`).
+- Roll any Stripe / Resend / OAuth secrets that were used in development.
+- Confirm no secrets are tracked: `git ls-files | grep -i env` should list only
+  `.env.example`. (`.env*` is gitignored.)
 
 ### Common tasks
 

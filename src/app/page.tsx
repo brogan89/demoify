@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Disc3, HandCoins, Heart, History, Link2, Mail, MessageSquare } from "lucide-react";
+import { Disc3, HandCoins, Heart, History, Link2, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WaveformBars } from "@/components/waveform";
 
@@ -112,15 +112,9 @@ export default function Home() {
             early development — so expect rough edges as it grows.
           </p>
           <p className="mt-3 text-sm text-muted-foreground">
-            Have feedback or found a bug? I&rsquo;d love to hear it.
+            Have feedback or found a bug? Open an issue on GitHub — I&rsquo;d love
+            to hear it.
           </p>
-          <a
-            href="mailto:wineanddev@gmail.com?subject=Demoify%20feedback"
-            className="mt-4 inline-flex items-center gap-1.5 text-sm text-primary underline-offset-4 hover:underline"
-          >
-            <Mail className="size-4" />
-            wineanddev@gmail.com
-          </a>
         </div>
       </section>
     </div>

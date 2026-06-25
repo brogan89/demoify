@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { getMembership, canManageSongs } from "@/lib/band";
-import { UPLOAD_COST } from "@/lib/credits";
+import { UPLOAD_COST, creditsEnabled } from "@/lib/credits";
+import { syncTrack } from "@/lib/federation";
 
 const INSUFFICIENT_CREDITS = "INSUFFICIENT_CREDITS";
 
@@ -31,17 +32,21 @@ export async function createVersion(input: CreateVersionInput) {
   // D1 (SQLite) has no interactive transactions, so we can't read-then-write in one
   // atomic block. Instead: charge atomically up front (conditional decrement), then
   // write the version + ledger in one batch, refunding the charge if that write fails.
+  // When the credit economy is disabled (self-hosting) we skip charging entirely.
+  const charge = creditsEnabled();
 
   // 1. Charge the band's credits — atomic and conditional; guards double-spend.
-  const charged = await prisma.band.updateMany({
-    where: { id: project.bandId, credits: { gte: UPLOAD_COST } },
-    data: { credits: { decrement: UPLOAD_COST } },
-  });
-  if (charged.count === 0) {
-    return {
-      error: `Not enough credits. Each upload costs ${UPLOAD_COST} credits.`,
-      code: INSUFFICIENT_CREDITS,
-    };
+  if (charge) {
+    const charged = await prisma.band.updateMany({
+      where: { id: project.bandId, credits: { gte: UPLOAD_COST } },
+      data: { credits: { decrement: UPLOAD_COST } },
+    });
+    if (charged.count === 0) {
+      return {
+        error: `Not enough credits. Each upload costs ${UPLOAD_COST} credits.`,
+        code: INSUFFICIENT_CREDITS,
+      };
+    }
   }
 
   try {
@@ -56,21 +61,27 @@ export async function createVersion(input: CreateVersionInput) {
       });
       const versionNumber = (last?.versionNumber ?? 0) + 1;
 
+      const versionData = {
+        projectId: project.id,
+        versionNumber,
+        audioUrl: input.audioUrl,
+        changelog: input.changelog?.trim() || null,
+        duration: input.duration ?? null,
+      };
+
       try {
-        const [version] = await prisma.$transaction([
-          prisma.songVersion.create({
-            data: {
-              projectId: project.id,
-              versionNumber,
-              audioUrl: input.audioUrl,
-              changelog: input.changelog?.trim() || null,
-              duration: input.duration ?? null,
-            },
-          }),
-          prisma.creditTransaction.create({
-            data: { bandId: project.bandId, delta: -UPLOAD_COST, reason: "upload" },
-          }),
-        ]);
+        // Version row (+ the spend ledger row when charging) commit together.
+        const [version] = charge
+          ? await prisma.$transaction([
+              prisma.songVersion.create({ data: versionData }),
+              prisma.creditTransaction.create({
+                data: { bandId: project.bandId, delta: -UPLOAD_COST, reason: "upload" },
+              }),
+            ])
+          : await prisma.$transaction([prisma.songVersion.create({ data: versionData })]);
+
+        // A new version on a public song refreshes its hub mirror (latest audio).
+        await syncTrack(project.id);
 
         revalidatePath(`/dashboard/${project.id}`);
         revalidatePath(`/${project.band.username}/${project.slug}`);
@@ -84,10 +95,13 @@ export async function createVersion(input: CreateVersionInput) {
     throw new Error("Could not assign a version number after several attempts");
   } catch (err) {
     // 3. The write failed after we charged — refund so credits aren't lost.
-    await prisma.band.update({
-      where: { id: project.bandId },
-      data: { credits: { increment: UPLOAD_COST } },
-    });
+    // No-op when we never charged (credit economy disabled).
+    if (charge) {
+      await prisma.band.update({
+        where: { id: project.bandId },
+        data: { credits: { increment: UPLOAD_COST } },
+      });
+    }
     throw err;
   }
 }

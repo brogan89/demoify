@@ -6,6 +6,7 @@ import { SignOutButton } from "@/components/sign-out-button";
 import { BandSwitcher } from "@/components/band-switcher";
 import { getCurrentUser } from "@/lib/session";
 import { getMyBands, getActiveBand } from "@/lib/band";
+import { creditsEnabled } from "@/lib/credits";
 
 export async function SiteHeader() {
   const user = await getCurrentUser();
@@ -38,14 +39,16 @@ export async function SiteHeader() {
                 }))}
                 activeBandId={active.band.id}
               />
-              <Link
-                href="/dashboard/credits"
-                className="flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                title="Buy credits"
-              >
-                <Coins className="size-3.5 text-primary" suppressHydrationWarning />
-                {active.band.credits}
-              </Link>
+              {creditsEnabled() && (
+                <Link
+                  href="/dashboard/credits"
+                  className="flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                  title="Buy credits"
+                >
+                  <Coins className="size-3.5 text-primary" suppressHydrationWarning />
+                  {active.band.credits}
+                </Link>
+              )}
               <Button asChild variant="ghost" size="sm">
                 <Link href="/dashboard">Dashboard</Link>
               </Button>
