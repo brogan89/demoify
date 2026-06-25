@@ -11,8 +11,9 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
+  // A signed-in user with no artist profile yet is sent to create their first one.
   const active = await getActiveBand();
-  if (!active) redirect("/login");
+  if (!active) redirect("/dashboard/new-artist");
 
   const canManage = canManageSongs(active.role);
   const projects = await listBandProjects();

@@ -51,6 +51,18 @@ export async function SiteHeader() {
               </Button>
               <SignOutButton />
             </>
+          ) : user ? (
+            // Signed in but no artist profile yet — a listener. Give them the
+            // full listening nav, with creating a profile as a low-key option.
+            <>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/library">Library</Link>
+              </Button>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/dashboard/new-artist">Create artist profile</Link>
+              </Button>
+              <SignOutButton />
+            </>
           ) : (
             <>
               <Button asChild variant="ghost" size="sm">

@@ -12,7 +12,7 @@ import {
   type Role,
 } from "@/lib/band";
 import { uniqueBandUsername } from "@/lib/username";
-import { NEW_ARTIST_CREDITS } from "@/lib/credits";
+import { STARTING_CREDITS, NEW_ARTIST_CREDITS } from "@/lib/credits";
 
 const ROLES: Role[] = ["ADMIN", "MANAGER", "MEMBER"];
 const MAX_NAME_LENGTH = 60;
@@ -42,9 +42,9 @@ export async function setActiveBand(bandId: string) {
 }
 
 /**
- * Create an additional artist profile for the current user. Free to create, but
- * the new artist starts with just one free upload's worth of credits (the first
- * artist, made at signup, gets the full STARTING_CREDITS). The user becomes its
+ * Create an artist profile for the current user. The user's *first* artist gets
+ * the full STARTING_CREDITS (≈10 free uploads); any *additional* artist is free
+ * to create but starts with just one free upload's worth. The user becomes its
  * ADMIN and it's switched to active.
  */
 export async function createArtistProfile(input: { name: string }) {
@@ -57,11 +57,17 @@ export async function createArtistProfile(input: { name: string }) {
     return { error: `Name must be ${MAX_NAME_LENGTH} characters or fewer` };
   }
 
+  // First artist gets the full starting balance; later ones get the reduced amount.
+  const existingMemberships = await prisma.bandMembership.count({
+    where: { userId: user.id },
+  });
+  const credits = existingMemberships === 0 ? STARTING_CREDITS : NEW_ARTIST_CREDITS;
+
   const band = await prisma.band.create({
     data: {
       username: await uniqueBandUsername(name),
       displayName: name,
-      credits: NEW_ARTIST_CREDITS,
+      credits,
     },
   });
   await prisma.bandMembership.create({

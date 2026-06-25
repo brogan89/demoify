@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { signUp } from "@/lib/auth-client";
+import { normalizeUsername } from "@/lib/username";
+import { checkUsernameAvailable } from "@/app/actions/account";
 
 export function SignupForm() {
   const router = useRouter();
@@ -18,10 +20,10 @@ export function SignupForm() {
     const form = new FormData(e.currentTarget);
     const email = String(form.get("email"));
     const password = String(form.get("password"));
-    const bandName = String(form.get("bandName")).trim();
+    const username = normalizeUsername(String(form.get("username") ?? ""));
 
-    if (!bandName) {
-      toast.error("Artist name is required");
+    if (!username) {
+      toast.error("Username is required");
       return;
     }
     if (password.length < 8) {
@@ -30,12 +32,21 @@ export function SignupForm() {
     }
 
     setBusy(true);
-    // Username is derived from the band name server-side (see auth create hook).
+    // Strict username check before creating the account, so the user gets the
+    // exact handle they chose (or a clear "taken" message).
+    const check = await checkUsernameAvailable(username);
+    if (!check.available) {
+      setBusy(false);
+      toast.error(check.error ?? "That username isn't available");
+      return;
+    }
+
     const { data, error } = await signUp.email({
       email,
       password,
-      name: bandName,
-      displayName: bandName,
+      name: username,
+      displayName: username,
+      username,
     } as Parameters<typeof signUp.email>[0]);
     setBusy(false);
 
@@ -44,11 +55,12 @@ export function SignupForm() {
       return;
     }
     // When verification is required there's no session yet (token is null) →
-    // send them to verify. Otherwise they're signed in → straight to dashboard.
+    // send them to verify. Otherwise they're signed in → on to create their
+    // first artist profile.
     const signedIn = Boolean((data as { token?: string | null } | null)?.token);
     if (signedIn) {
       toast.success("Welcome to Demoify");
-      router.push("/dashboard");
+      router.push("/dashboard/new-artist");
       router.refresh();
     } else {
       toast.success("Account created — check your email to verify");
@@ -59,11 +71,11 @@ export function SignupForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="space-y-1.5">
-        <Label htmlFor="bandName">Artist name</Label>
-        <Input id="bandName" name="bandName" required placeholder="Artist name" />
+        <Label htmlFor="username">Username</Label>
+        <Input id="username" name="username" required placeholder="your-handle" />
         <p className="text-xs text-muted-foreground">
-          Your first artist profile is created from this, at demoify.app/
-          <span className="font-mono">artist-name</span>. You can add more later.
+          Your personal handle on Demoify. Create an artist profile to upload songs, or
+          just listen and comment &mdash; it&rsquo;s up to you.
         </p>
       </div>
       <div className="space-y-1.5">

@@ -1,9 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "@/lib/db";
-import { slugify } from "@/lib/slug";
-import { uniqueBandUsername } from "@/lib/username";
-import { STARTING_CREDITS } from "@/lib/credits";
+import { uniqueUserUsername } from "@/lib/username";
 import { sendEmail, actionEmail, isEmailConfigured } from "@/lib/email";
 
 const APP_URL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
@@ -12,18 +10,6 @@ const APP_URL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
 // In production Resend is configured → verification required. Locally (no
 // RESEND_API_KEY) it's relaxed so you can sign up and test without a mailbox.
 const EMAIL_VERIFICATION = isEmailConfigured();
-
-/** Slugify a name into a unique `user.username`, suffixed with -2, -3, … on clashes. */
-async function uniqueUserUsername(base: string): Promise<string> {
-  const root = slugify(base) || "band";
-  let candidate = root;
-  let n = 1;
-  while (await prisma.user.findUnique({ where: { username: candidate }, select: { id: true } })) {
-    n += 1;
-    candidate = `${root}-${n}`;
-  }
-  return candidate;
-}
 
 // Only enable a social provider when its credentials are present.
 const socialProviders: Record<string, { clientId: string; clientSecret: string }> = {};
@@ -79,8 +65,9 @@ export const auth = betterAuth({
   socialProviders,
   user: {
     additionalFields: {
-      // Generated in the create hook below — never accepted from the client.
-      username: { type: "string", required: false, input: false },
+      // The chosen handle from signup; re-normalized + uniqued in the create
+      // hook below, so the client value is a suggestion, never trusted raw.
+      username: { type: "string", required: false, input: true },
       displayName: { type: "string", required: false, input: true },
       avatarUrl: { type: "string", required: false, input: true },
     },
@@ -88,41 +75,28 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
+        // Signup creates only the user account (identified by a username). The
+        // user creates their first artist/band profile as a separate step
+        // (see createArtistProfile) — no band is auto-created here.
         before: async (user) => {
           const u = user as typeof user & {
+            username?: string;
             displayName?: string;
             avatarUrl?: string | null;
             image?: string | null;
           };
-          const displayName = u.displayName || u.name || "Band Name";
+          // Email signups send a (pre-checked) username; social signups don't,
+          // so fall back to their name. uniqueUserUsername slugifies + uniques.
+          const base = u.username || u.displayName || u.name || "user";
+          const username = await uniqueUserUsername(base);
           return {
             data: {
               ...u,
-              displayName,
+              username,
+              displayName: u.displayName || u.username || u.name || username,
               avatarUrl: u.avatarUrl ?? u.image ?? null,
-              username: await uniqueUserUsername(displayName),
             },
           };
-        },
-        // After the account exists, give it a band: the signup's band name
-        // becomes the band's identity, and the new user is its ADMIN.
-        after: async (user) => {
-          const u = user as typeof user & {
-            displayName?: string;
-            avatarUrl?: string | null;
-          };
-          const name = u.displayName || u.name || "Band Name";
-          const band = await prisma.band.create({
-            data: {
-              username: await uniqueBandUsername(name),
-              displayName: name,
-              avatarUrl: u.avatarUrl ?? null,
-              credits: STARTING_CREDITS,
-            },
-          });
-          await prisma.bandMembership.create({
-            data: { bandId: band.id, userId: u.id, role: "ADMIN" },
-          });
         },
       },
     },
