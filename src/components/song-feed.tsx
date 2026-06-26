@@ -9,6 +9,14 @@ import { AudioPlayer, type AudioPlayerHandle } from "@/components/audio-player";
 import { SongCard, SongStats, type SongCardData } from "@/components/song-card";
 import { recordPlay, recordFullPlay } from "@/app/actions/plays";
 
+function fmtDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 /**
  * A single column of song cards, each playable inline (with the shared waveform)
  * and likeable, clicking through to the song page for comments and version
@@ -68,10 +76,16 @@ export function SongFeed({
                   <Music4 className="size-4 shrink-0 text-primary" />
                   <Link
                     href={`/${card.band.username}/${card.slug}`}
-                    className="truncate hover:underline"
+                    className="min-w-0 truncate hover:underline"
                   >
                     {card.title}
                   </Link>
+                  <span
+                    className="shrink-0 text-xs font-normal text-muted-foreground"
+                    title={`Updated ${fmtDate(card.version.uploadedAt)}`}
+                  >
+                    v{card.version.versionNumber} · {fmtDate(card.version.uploadedAt)}
+                  </span>
                 </CardTitle>
                 <Link
                   href={`/${card.band.username}`}

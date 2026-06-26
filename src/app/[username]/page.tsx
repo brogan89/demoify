@@ -57,7 +57,7 @@ export default async function ArtistProfilePage({
         versions: {
           orderBy: { versionNumber: "desc" },
           take: 1,
-          select: { id: true, audioUrl: true, duration: true },
+          select: { id: true, audioUrl: true, duration: true, versionNumber: true, uploadedAt: true },
         },
       },
     }),
@@ -72,7 +72,7 @@ export default async function ArtistProfilePage({
     likeCount: s._count.likes,
     liked: s.likes.length > 0,
     band: { username: band.username, displayName: band.displayName },
-    version: s.versions[0],
+    version: { ...s.versions[0], uploadedAt: s.versions[0].uploadedAt.toISOString() },
   }));
 
   return (

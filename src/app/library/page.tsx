@@ -28,7 +28,7 @@ export default async function LibraryPage() {
           versions: {
             orderBy: { versionNumber: "desc" },
             take: 1,
-            select: { id: true, audioUrl: true, duration: true },
+            select: { id: true, audioUrl: true, duration: true, versionNumber: true, uploadedAt: true },
           },
         },
       },
@@ -44,7 +44,10 @@ export default async function LibraryPage() {
     likeCount: l.project._count.likes,
     liked: true,
     band: { username: l.project.band.username, displayName: l.project.band.displayName },
-    version: l.project.versions[0],
+    version: {
+      ...l.project.versions[0],
+      uploadedAt: l.project.versions[0].uploadedAt.toISOString(),
+    },
   }));
 
   return (

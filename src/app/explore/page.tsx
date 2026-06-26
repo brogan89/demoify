@@ -65,7 +65,7 @@ export default async function ExplorePage({
       versions: {
         orderBy: { versionNumber: "desc" },
         take: 1,
-        select: { id: true, audioUrl: true, duration: true },
+        select: { id: true, audioUrl: true, duration: true, versionNumber: true, uploadedAt: true },
       },
     },
   });
@@ -83,7 +83,7 @@ export default async function ExplorePage({
       likeCount: s._count.likes,
       liked: s.likes.length > 0,
       band: s.band,
-      version: s.versions[0],
+      version: { ...s.versions[0], uploadedAt: s.versions[0].uploadedAt.toISOString() },
     },
     recentAt: s.createdAt.getTime(),
     likes: s._count.likes,

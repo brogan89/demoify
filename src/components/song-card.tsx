@@ -13,7 +13,14 @@ export type SongCardData = {
   band: { username: string; displayName: string };
   // Latest playable version, for inline playback in the Explore feed. Absent on
   // federated cards (which link out to their origin instead) — see SongFeed.
-  version?: { id: string; audioUrl: string; duration: number | null };
+  // `uploadedAt` is an ISO string (Dates aren't serializable to Client Components).
+  version?: {
+    id: string;
+    audioUrl: string;
+    duration: number | null;
+    versionNumber: number;
+    uploadedAt: string;
+  };
   // Set for federated tracks mirrored from another instance. When present the
   // card links out to the origin site (where playback lives) and likes are
   // disabled — there's no local song to like.
