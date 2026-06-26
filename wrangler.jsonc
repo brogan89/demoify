@@ -37,5 +37,29 @@
 	// --- Custom domain (zone demoify.app active on Cloudflare) -------------
 	"routes": [
 		{ "pattern": "demoify.app", "custom_domain": true }
-	]
+	],
+
+	// --- Dev-only: point `next dev` at production data --------------------
+	// Selected by `npm run dev:remote` (sets DEV_REMOTE_DB=1, which makes
+	// next.config.ts pass `environment: "remote"` to getPlatformProxy).
+	// The `remote: true` D1 binding resolves to the live Cloudflare database
+	// instead of the empty local emulation, so pages like /explore render
+	// real data. Writes are blocked by a read-only guard in src/lib/db.ts.
+	// Requires `wrangler login`. Not used by `wrangler deploy` (top-level only).
+	// Named environments do NOT inherit bindings, so mirror what dev needs.
+	"env": {
+		"remote": {
+			"vars": { "BETTER_AUTH_URL": "http://localhost:3000" },
+			"images": { "binding": "IMAGES" },
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "demoify",
+					"database_id": "528fd335-23b4-4922-9e44-c83e94d50bd9",
+					"migrations_dir": "migrations",
+					"remote": true
+				}
+			]
+		}
+	}
 }

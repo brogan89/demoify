@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { Heart } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
-import { PlaylistPlayer, type PlaylistTrack } from "@/components/playlist-player";
+import { SongFeed } from "@/components/song-feed";
+import { type SongCardData } from "@/components/song-card";
 
 export const metadata: Metadata = {
   title: "Library · Demoify",
@@ -23,19 +24,27 @@ export default async function LibraryPage() {
       project: {
         include: {
           band: { select: { username: true, displayName: true } },
-          versions: { orderBy: { versionNumber: "desc" }, take: 1 },
+          _count: { select: { likes: true } },
+          versions: {
+            orderBy: { versionNumber: "desc" },
+            take: 1,
+            select: { id: true, audioUrl: true, duration: true },
+          },
         },
       },
     },
   });
 
-  const tracks: PlaylistTrack[] = likes.map((l) => ({
-    projectId: l.project.id,
+  // These are the viewer's likes, so every card is liked.
+  const entries: SongCardData[] = likes.map((l) => ({
+    id: l.project.id,
     title: l.project.title,
-    bandName: l.project.band.displayName,
-    path: `/${l.project.band.username}/${l.project.slug}`,
-    audioUrl: l.project.versions[0].audioUrl,
-    duration: l.project.versions[0].duration,
+    slug: l.project.slug,
+    playCount: l.project.playCount,
+    likeCount: l.project._count.likes,
+    liked: true,
+    band: { username: l.project.band.username, displayName: l.project.band.displayName },
+    version: l.project.versions[0],
   }));
 
   return (
@@ -45,12 +54,12 @@ export default async function LibraryPage() {
         <div>
           <h1 className="text-2xl font-semibold">Your library</h1>
           <p className="text-sm text-muted-foreground">
-            {tracks.length} liked song{tracks.length === 1 ? "" : "s"}
+            {entries.length} liked song{entries.length === 1 ? "" : "s"}
           </p>
         </div>
       </div>
 
-      {tracks.length === 0 ? (
+      {entries.length === 0 ? (
         <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
           No liked songs yet. Find some on{" "}
           <Link href="/explore" className="text-primary underline-offset-4 hover:underline">
@@ -59,7 +68,7 @@ export default async function LibraryPage() {
           .
         </p>
       ) : (
-        <PlaylistPlayer tracks={tracks} />
+        <SongFeed entries={entries} isAuthed />
       )}
     </div>
   );

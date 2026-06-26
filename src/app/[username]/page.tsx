@@ -7,7 +7,8 @@ import { getCurrentUser } from "@/lib/session";
 import { getMembership, isMember } from "@/lib/band";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { SongCard } from "@/components/song-card";
+import { SongFeed } from "@/components/song-feed";
+import { type SongCardData } from "@/components/song-card";
 import { TipButton } from "@/components/tip-button";
 import { TipResultToast } from "@/components/tip-result-toast";
 
@@ -52,13 +53,30 @@ export default async function ArtistProfilePage({
       include: {
         _count: { select: { likes: true } },
         likes: { where: { userId: viewerId }, select: { id: true } },
+        // Latest version powers inline playback in the feed.
+        versions: {
+          orderBy: { versionNumber: "desc" },
+          take: 1,
+          select: { id: true, audioUrl: true, duration: true },
+        },
       },
     }),
     currentUser ? getMembership(band.id, currentUser.id) : Promise.resolve(null),
   ]);
 
+  const entries: SongCardData[] = songs.map((s) => ({
+    id: s.id,
+    title: s.title,
+    slug: s.slug,
+    playCount: s.playCount,
+    likeCount: s._count.likes,
+    liked: s.likes.length > 0,
+    band: { username: band.username, displayName: band.displayName },
+    version: s.versions[0],
+  }));
+
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
+    <div className="mx-auto max-w-3xl px-4 py-10">
       <TipResultToast bandName={band.displayName} />
       <header className="mb-8 flex items-start gap-4">
         <Avatar className="size-16">
@@ -100,24 +118,7 @@ export default async function ArtistProfilePage({
           No public tracks yet.
         </p>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {songs.map((s) => (
-            <li key={s.id}>
-              <SongCard
-                song={{
-                  id: s.id,
-                  title: s.title,
-                  slug: s.slug,
-                  playCount: s.playCount,
-                  likeCount: s._count.likes,
-                  liked: s.likes.length > 0,
-                  band: { username: band.username, displayName: band.displayName },
-                }}
-                isAuthed={Boolean(currentUser)}
-              />
-            </li>
-          ))}
-        </ul>
+        <SongFeed entries={entries} isAuthed={Boolean(currentUser)} />
       )}
     </div>
   );

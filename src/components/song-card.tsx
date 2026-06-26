@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Globe, Music4, Play } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Globe, Heart, Music4, Play } from "lucide-react";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LikeButton } from "@/components/like-button";
 
 export type SongCardData = {
@@ -11,11 +11,59 @@ export type SongCardData = {
   likeCount: number;
   liked: boolean;
   band: { username: string; displayName: string };
+  // Latest playable version, for inline playback in the Explore feed. Absent on
+  // federated cards (which link out to their origin instead) — see SongFeed.
+  version?: { id: string; audioUrl: string; duration: number | null };
   // Set for federated tracks mirrored from another instance. When present the
   // card links out to the origin site (where playback lives) and likes are
   // disabled — there's no local song to like.
   external?: { trackUrl: string; artistUrl: string; originName: string };
 };
+
+/**
+ * Plays + like, shown in the top-right of a song card's header (the `CardAction`
+ * slot). Shared by SongCard and the Explore feed so the stats look identical
+ * everywhere. For federated tracks (`external`) there's no local song to like, so
+ * the like count is shown statically. `playCount` is passed already-resolved so
+ * callers can feed an optimistic count (the Explore feed bumps it on play).
+ */
+export function SongStats({
+  playCount,
+  likeCount,
+  liked,
+  isAuthed,
+  projectId,
+  external,
+}: {
+  playCount: number;
+  likeCount: number;
+  liked: boolean;
+  isAuthed: boolean;
+  projectId: string;
+  external?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <span className="flex items-center gap-1" title="Plays">
+        <Play className="size-3 fill-current" />
+        {playCount.toLocaleString()}
+      </span>
+      {external ? (
+        <span className="flex items-center gap-1" title="Likes">
+          <Heart className="size-3 fill-current" />
+          {likeCount.toLocaleString()}
+        </span>
+      ) : (
+        <LikeButton
+          projectId={projectId}
+          initialLiked={liked}
+          initialCount={likeCount}
+          isAuthed={isAuthed}
+        />
+      )}
+    </div>
+  );
+}
 
 /** A public song tile used by Explore and artist profile pages. */
 export function SongCard({ song, isAuthed }: { song: SongCardData; isAuthed: boolean }) {
@@ -70,28 +118,19 @@ export function SongCard({ song, isAuthed }: { song: SongCardData; isAuthed: boo
             via {ext.originName}
           </span>
         )}
+        <CardAction>
+          <SongStats
+            playCount={song.playCount}
+            likeCount={song.likeCount}
+            liked={song.liked}
+            isAuthed={isAuthed}
+            projectId={song.id}
+            external={Boolean(ext)}
+          />
+        </CardAction>
       </CardHeader>
-      <CardContent className="mt-auto flex items-center justify-between gap-2 text-sm text-muted-foreground">
+      <CardContent className="mt-auto flex text-sm text-muted-foreground">
         {ArtistLink}
-        <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1 text-xs" title="Plays">
-            <Play className="size-3 fill-current" />
-            {song.playCount.toLocaleString()}
-          </span>
-          {ext ? (
-            // No local song to like; show the count statically.
-            <span className="flex items-center gap-1 text-xs" title="Likes">
-              ♥ {song.likeCount.toLocaleString()}
-            </span>
-          ) : (
-            <LikeButton
-              projectId={song.id}
-              initialLiked={song.liked}
-              initialCount={song.likeCount}
-              isAuthed={isAuthed}
-            />
-          )}
-        </div>
       </CardContent>
     </Card>
   );

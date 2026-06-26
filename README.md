@@ -107,6 +107,25 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+### Developing against production data
+
+Local dev uses an empty emulated D1, so data-driven pages (e.g. **Explore**) look
+empty until you create songs. To test those pages with **real production data**
+instead, point dev at the live D1:
+
+```bash
+wrangler login    # once — remote bindings proxy through the Cloudflare API
+just run-remote   # or: npm run dev:remote
+```
+
+This uses Cloudflare [remote bindings](https://developers.cloudflare.com/workers/development-testing/#remote-bindings):
+nothing is copied to disk, and the data stays current. Writes are **blocked** by a
+read-only guard ([`src/lib/db.ts`](src/lib/db.ts)) so testing can't mutate
+production. That guard also blocks Better Auth's session writes, so **you stay
+logged out** in this mode — public/logged-out views (Explore, song pages) work
+fully; for logged-in flows, use the local `just run`. Plain `just run` is
+unaffected and still offline.
+
 ### Environment variables
 
 Copy `.env.example` to `.env` and fill it in. The app runs with just the core group;
@@ -223,7 +242,8 @@ Common [`just`](https://github.com/casey/just) recipes (run `just` for the full 
 | Command | What it does |
 | --- | --- |
 | `just setup` | Install deps, create `.env`, generate the client, apply local D1 migrations. |
-| `just run` | Start the dev server at `http://localhost:3000`. |
+| `just run` | Start the dev server at `http://localhost:3000` (offline, local D1). |
+| `just run-remote` | Start dev against the live production D1, read-only (needs `wrangler login`). |
 | `just migrate` | Apply D1 migrations to the local database. |
 | `just migrate-remote` | Apply D1 migrations to production. |
 | `just generate` | Regenerate the Prisma client. |

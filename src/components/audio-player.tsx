@@ -16,6 +16,7 @@ export type AudioPlayerHandle = {
   getCurrentTime(): number;
   seekTo(seconds: number): void;
   play(): void;
+  pause(): void;
 };
 
 export function AudioPlayer({
@@ -72,6 +73,7 @@ export function AudioPlayer({
       getCurrentTime: () => audioRef.current?.currentTime ?? current,
       seekTo,
       play: () => void audioRef.current?.play(),
+      pause: () => audioRef.current?.pause(),
     }),
     [current],
   );

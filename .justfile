@@ -40,6 +40,12 @@ migrate-remote:
 run:
     npm run dev
 
+# Start the dev server against the live production D1 (read-only). Requires
+# `wrangler login`. Useful for testing data-driven pages (e.g. /explore) with
+# real data. Writes are blocked by a guard in src/lib/db.ts.
+run-remote:
+    npm run dev:remote
+
 # Open Prisma Studio to inspect the database.
 studio:
     npx prisma studio

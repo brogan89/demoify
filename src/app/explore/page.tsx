@@ -4,7 +4,8 @@ import { Search } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { Input } from "@/components/ui/input";
-import { SongCard, type SongCardData } from "@/components/song-card";
+import { type SongCardData } from "@/components/song-card";
+import { SongFeed } from "@/components/song-feed";
 import { ExploreFilters } from "@/components/explore-filters";
 import { normalizeGenre } from "@/lib/genres";
 import { federationHubEnabled } from "@/lib/federation";
@@ -60,6 +61,12 @@ export default async function ExplorePage({
       band: { select: { username: true, displayName: true } },
       _count: { select: { likes: true } },
       likes: { where: { userId: viewerId }, select: { id: true } },
+      // Latest version powers inline playback (and the waveform) in the feed.
+      versions: {
+        orderBy: { versionNumber: "desc" },
+        take: 1,
+        select: { id: true, audioUrl: true, duration: true },
+      },
     },
   });
 
@@ -76,6 +83,7 @@ export default async function ExplorePage({
       likeCount: s._count.likes,
       liked: s.likes.length > 0,
       band: s.band,
+      version: s.versions[0],
     },
     recentAt: s.createdAt.getTime(),
     likes: s._count.likes,
@@ -124,7 +132,7 @@ export default async function ExplorePage({
     .slice(0, 50);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
+    <div className="mx-auto max-w-3xl px-4 py-10">
       <div className="mb-4 flex items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Explore</h1>
@@ -164,13 +172,7 @@ export default async function ExplorePage({
             : "No public songs yet."}
         </p>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {entries.map(({ card }) => (
-            <li key={`${card.external ? "ext" : "loc"}-${card.id}`}>
-              <SongCard song={card} isAuthed={Boolean(user)} />
-            </li>
-          ))}
-        </ul>
+        <SongFeed entries={entries.map(({ card }) => card)} isAuthed={Boolean(user)} />
       )}
     </div>
   );
