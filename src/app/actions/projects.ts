@@ -2,6 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+// NOTE: createProject no longer redirects — it returns the new project id so the
+// caller (CreateSongForm) can upload the first audio version before navigating.
 import { ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
@@ -21,7 +23,7 @@ export async function createProject(formData: FormData) {
 
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim() || null;
-  if (!title) return;
+  if (!title) return { error: "Title is required" };
 
   const { genre, subgenre } = normalizeGenre(
     formData.get("genre")?.toString(),
@@ -39,7 +41,7 @@ export async function createProject(formData: FormData) {
   });
 
   revalidatePath("/dashboard");
-  redirect(`/dashboard/${project.id}`);
+  return { projectId: project.id };
 }
 
 export async function deleteProject(projectId: string) {

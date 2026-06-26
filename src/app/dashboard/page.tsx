@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { Lock, Music4 } from "lucide-react";
 import { getCurrentUser } from "@/lib/session";
 import { getActiveBand, canManageSongs } from "@/lib/band";
+import { isR2Configured } from "@/lib/r2";
+import { creditsEnabled } from "@/lib/credits";
 import { listBandProjects } from "@/app/actions/projects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreateSongForm } from "@/components/create-song-form";
@@ -73,7 +75,11 @@ export default async function DashboardPage() {
                 <CardTitle className="text-base">Create a song</CardTitle>
               </CardHeader>
               <CardContent>
-                <CreateSongForm />
+                <CreateSongForm
+                  uploadsEnabled={isR2Configured()}
+                  credits={active.band.credits}
+                  creditsRequired={creditsEnabled()}
+                />
               </CardContent>
             </Card>
           </aside>
