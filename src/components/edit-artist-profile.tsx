@@ -14,6 +14,8 @@ import {
   isAcceptedImage,
   putToPresigned,
 } from "@/lib/upload";
+import { SOCIAL_PLATFORMS, type SocialLinkMap } from "@/lib/socials";
+import { SocialIcon } from "@/components/social-links";
 import { updateArtistProfile } from "@/app/actions/bands";
 
 function initials(name: string): string {
@@ -25,17 +27,20 @@ export function EditArtistProfile({
   initialDisplayName,
   initialBio,
   initialAvatarUrl,
+  initialSocialLinks,
 }: {
   bandId: string;
   initialDisplayName: string;
   initialBio: string;
   initialAvatarUrl: string | null;
+  initialSocialLinks: SocialLinkMap;
 }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [bio, setBio] = useState(initialBio);
   const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl);
+  const [links, setLinks] = useState<SocialLinkMap>(initialSocialLinks);
   const [uploading, setUploading] = useState(false);
   const [saving, startSave] = useTransition();
 
@@ -80,7 +85,7 @@ export function EditArtistProfile({
 
   function save() {
     startSave(async () => {
-      const res = await updateArtistProfile({ bandId, displayName, bio });
+      const res = await updateArtistProfile({ bandId, displayName, bio, socialLinks: links });
       if (res.error) {
         toast.error(res.error);
         return;
@@ -141,6 +146,29 @@ export function EditArtistProfile({
           placeholder="Tell people about this artist…"
           disabled={saving}
         />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Links</Label>
+        <p className="text-xs text-muted-foreground">
+          Paste full URLs. Your handle is shown next to each icon on your profile.
+        </p>
+        <div className="space-y-2">
+          {SOCIAL_PLATFORMS.map((p) => (
+            <div key={p.key} className="flex items-center gap-2">
+              <SocialIcon platform={p.key} className="size-4 shrink-0 text-muted-foreground" />
+              <Input
+                type="url"
+                inputMode="url"
+                aria-label={p.label}
+                placeholder={p.placeholder}
+                value={links[p.key] ?? ""}
+                onChange={(e) => setLinks((cur) => ({ ...cur, [p.key]: e.target.value }))}
+                disabled={saving}
+              />
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="flex justify-end">

@@ -13,6 +13,7 @@ import {
 } from "@/lib/band";
 import { uniqueBandUsername } from "@/lib/username";
 import { STARTING_CREDITS, NEW_ARTIST_CREDITS } from "@/lib/credits";
+import { cleanSocialLinks, type SocialLinkMap } from "@/lib/socials";
 
 const ROLES: Role[] = ["ADMIN", "MANAGER", "MEMBER"];
 const MAX_NAME_LENGTH = 60;
@@ -79,12 +80,13 @@ export async function createArtistProfile(input: { name: string }) {
   return { ok: true, username: band.username };
 }
 
-/** Update an artist profile's display name, bio, and/or logo. ADMIN/MANAGER only. */
+/** Update an artist profile's display name, bio, logo, and/or links. ADMIN/MANAGER only. */
 export async function updateArtistProfile(input: {
   bandId: string;
   displayName?: string;
   bio?: string;
   avatarUrl?: string;
+  socialLinks?: SocialLinkMap;
 }) {
   const user = await getCurrentUser();
   if (!user) return { error: "Unauthorized" };
@@ -92,7 +94,12 @@ export async function updateArtistProfile(input: {
   const role = await getMembership(input.bandId, user.id);
   if (!canManageSongs(role)) return { error: "Not allowed" };
 
-  const data: { displayName?: string; bio?: string | null; avatarUrl?: string } = {};
+  const data: {
+    displayName?: string;
+    bio?: string | null;
+    avatarUrl?: string;
+    socialLinks?: string | null;
+  } = {};
   if (input.displayName !== undefined) {
     const name = input.displayName.trim();
     if (!name) return { error: "Name can't be empty" };
@@ -109,6 +116,11 @@ export async function updateArtistProfile(input: {
     data.bio = bio || null;
   }
   if (input.avatarUrl !== undefined) data.avatarUrl = input.avatarUrl;
+  if (input.socialLinks !== undefined) {
+    const cleaned = cleanSocialLinks(input.socialLinks);
+    if ("error" in cleaned) return { error: cleaned.error };
+    data.socialLinks = Object.keys(cleaned.ok).length ? JSON.stringify(cleaned.ok) : null;
+  }
 
   const band = await prisma.band.update({ where: { id: input.bandId }, data });
 

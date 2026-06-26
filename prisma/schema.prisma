@@ -102,6 +102,9 @@ model Band {
   avatarUrl   String?
   // Short artist bio shown on the public profile page (/[username]).
   bio         String?
+  // Social/website links shown on the public profile page, as a JSON object map
+  // of `{ [platformKey]: url }` (e.g. {"instagram":"https://…"}). See src/lib/socials.ts.
+  socialLinks String?
   // Credits balance. New bands start with enough for 10 free uploads (STARTING_CREDITS).
   credits     Int      @default(100)
   // Stripe Connect (Express) account that receives tips for this artist. Null

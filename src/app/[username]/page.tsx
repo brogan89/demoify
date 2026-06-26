@@ -9,6 +9,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { SongFeed } from "@/components/song-feed";
 import { type SongCardData } from "@/components/song-card";
+import { SocialLinks } from "@/components/social-links";
+import { parseSocialLinks } from "@/lib/socials";
 import { TipButton } from "@/components/tip-button";
 import { TipResultToast } from "@/components/tip-result-toast";
 
@@ -107,6 +109,7 @@ export default async function ArtistProfilePage({
             </div>
           </div>
           {band.bio && <p className="mt-3 max-w-prose text-sm text-muted-foreground">{band.bio}</p>}
+          <SocialLinks links={parseSocialLinks(band.socialLinks)} />
         </div>
       </header>
 

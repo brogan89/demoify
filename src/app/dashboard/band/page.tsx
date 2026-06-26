@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/session";
 import { getActiveBand, canManageMembers, canManageSongs, type Role } from "@/lib/band";
 import { ManageBandMembers, type MemberRow } from "@/components/manage-band-members";
 import { EditArtistProfile } from "@/components/edit-artist-profile";
+import { parseSocialLinks } from "@/lib/socials";
 
 export default async function BandPage() {
   const user = await getCurrentUser();
@@ -17,7 +18,7 @@ export default async function BandPage() {
 
   const profile = await prisma.band.findUnique({
     where: { id: active.band.id },
-    select: { bio: true, avatarUrl: true },
+    select: { bio: true, avatarUrl: true, socialLinks: true },
   });
 
   const memberships = await prisma.bandMembership.findMany({
@@ -61,6 +62,7 @@ export default async function BandPage() {
             initialDisplayName={active.band.displayName}
             initialBio={profile?.bio ?? ""}
             initialAvatarUrl={profile?.avatarUrl ?? null}
+            initialSocialLinks={parseSocialLinks(profile?.socialLinks)}
           />
         </section>
       )}
