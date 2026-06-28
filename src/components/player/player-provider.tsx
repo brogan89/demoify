@@ -136,6 +136,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const getCurrentTime = useCallback(() => audioRef.current?.currentTime ?? 0, []);
 
+  // The `<audio>` element's `paused` is the source of truth for play/pause. Discrete
+  // events alone can drift after a client navigation (e.g. a stray `loadstart`, or a
+  // missed event while React re-attaches listeners), leaving the button showing the
+  // wrong icon. Re-deriving from `paused` keeps the UI honest; `setPlaying` bails out
+  // when the value is unchanged, so calling this on every `timeupdate` is cheap.
+  const syncPlaying = useCallback(() => {
+    const a = audioRef.current;
+    if (a) setPlaying(!a.paused);
+  }, []);
+
   const next = useCallback(() => {
     setIndex((i) => (i + 1 < queueRef.current.length ? i + 1 : i));
   }, []);
@@ -191,8 +201,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           src={current?.audioUrl}
           preload="metadata"
           onLoadStart={() => {
-            // New source selected — reset the transport.
-            setPlaying(false);
+            // New source selected — reset the transport. Derive play state from the
+            // element rather than forcing `false`, so a `loadstart` that fires while
+            // audio is still playing doesn't desync the button.
+            syncPlaying();
             setCurrentTime(0);
             setDuration(current?.duration ?? 0);
           }}
@@ -206,7 +218,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
             }
           }}
           onPause={() => setPlaying(false)}
-          onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+          onPlaying={syncPlaying}
+          onTimeUpdate={(e) => {
+            setCurrentTime(e.currentTarget.currentTime);
+            // Continuously reconcile the button with reality while audio plays, so any
+            // post-navigation desync self-corrects within a tick.
+            syncPlaying();
+          }}
           onLoadedMetadata={(e) => {
             setDuration(e.currentTarget.duration);
             if (startAtRef.current != null) {
