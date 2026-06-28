@@ -57,6 +57,9 @@ export function MobileNav({
         <DropdownMenuItem asChild>
           <Link href="/explore">Explore</Link>
         </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/artists">Artists</Link>
+        </DropdownMenuItem>
         {isAuthed && (
           <DropdownMenuItem asChild>
             <Link href="/library">Library</Link>
