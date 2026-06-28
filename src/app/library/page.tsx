@@ -24,7 +24,7 @@ export default async function LibraryPage() {
       project: {
         include: {
           band: { select: { username: true, displayName: true } },
-          _count: { select: { likes: true } },
+          _count: { select: { likes: true, comments: true } },
           versions: {
             orderBy: { versionNumber: "desc" },
             take: 1,
@@ -42,6 +42,7 @@ export default async function LibraryPage() {
     slug: l.project.slug,
     playCount: l.project.playCount,
     likeCount: l.project._count.likes,
+    commentCount: l.project._count.comments,
     liked: true,
     band: { username: l.project.band.username, displayName: l.project.band.displayName },
     version: {

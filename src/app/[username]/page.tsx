@@ -53,7 +53,7 @@ export default async function ArtistProfilePage({
       where: { bandId: band.id, visibility: "PUBLIC", versions: { some: {} } },
       orderBy: { createdAt: "desc" },
       include: {
-        _count: { select: { likes: true } },
+        _count: { select: { likes: true, comments: true } },
         likes: { where: { userId: viewerId }, select: { id: true } },
         // Latest version powers inline playback in the feed.
         versions: {
@@ -72,6 +72,7 @@ export default async function ArtistProfilePage({
     slug: s.slug,
     playCount: s.playCount,
     likeCount: s._count.likes,
+    commentCount: s._count.comments,
     liked: s.likes.length > 0,
     band: { username: band.username, displayName: band.displayName },
     version: { ...s.versions[0], uploadedAt: s.versions[0].uploadedAt.toISOString() },

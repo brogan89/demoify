@@ -59,7 +59,7 @@ export default async function ExplorePage({
     take: 50,
     include: {
       band: { select: { username: true, displayName: true } },
-      _count: { select: { likes: true } },
+      _count: { select: { likes: true, comments: true } },
       likes: { where: { userId: viewerId }, select: { id: true } },
       // Latest version powers inline playback (and the waveform) in the feed.
       versions: {
@@ -81,6 +81,7 @@ export default async function ExplorePage({
       slug: s.slug,
       playCount: s.playCount,
       likeCount: s._count.likes,
+      commentCount: s._count.comments,
       liked: s.likes.length > 0,
       band: s.band,
       version: { ...s.versions[0], uploadedAt: s.versions[0].uploadedAt.toISOString() },
@@ -114,6 +115,7 @@ export default async function ExplorePage({
         slug: "",
         playCount: t.playCount,
         likeCount: t.likeCount,
+        commentCount: 0,
         liked: false,
         band: { username: "", displayName: t.artistName },
         external: { trackUrl: t.trackUrl, artistUrl: t.artistUrl, originName: t.instance.name },

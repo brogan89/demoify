@@ -84,6 +84,7 @@ export function SongFeed({
                   <SongStats
                     playCount={playCountFor(card.id, card.playCount)}
                     likeCount={card.likeCount}
+                    commentCount={card.commentCount}
                     liked={card.liked}
                     isAuthed={isAuthed}
                     projectId={card.id}

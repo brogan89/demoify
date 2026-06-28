@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Globe, Heart, Music4, Play } from "lucide-react";
+import { Globe, Heart, MessageCircle, Music4, Play } from "lucide-react";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LikeButton } from "@/components/like-button";
 
@@ -9,6 +9,7 @@ export type SongCardData = {
   slug: string;
   playCount: number;
   likeCount: number;
+  commentCount: number;
   liked: boolean;
   band: { username: string; displayName: string };
   // Latest playable version, for inline playback in the Explore feed. Absent on
@@ -37,6 +38,7 @@ export type SongCardData = {
 export function SongStats({
   playCount,
   likeCount,
+  commentCount,
   liked,
   isAuthed,
   projectId,
@@ -44,6 +46,7 @@ export function SongStats({
 }: {
   playCount: number;
   likeCount: number;
+  commentCount: number;
   liked: boolean;
   isAuthed: boolean;
   projectId: string;
@@ -54,6 +57,10 @@ export function SongStats({
       <span className="flex items-center gap-1" title="Plays">
         <Play className="size-3 fill-current" />
         {playCount.toLocaleString()}
+      </span>
+      <span className="flex items-center gap-1" title="Comments">
+        <MessageCircle className="size-3" />
+        {commentCount.toLocaleString()}
       </span>
       {external ? (
         <span className="flex items-center gap-1" title="Likes">
@@ -129,6 +136,7 @@ export function SongCard({ song, isAuthed }: { song: SongCardData; isAuthed: boo
           <SongStats
             playCount={song.playCount}
             likeCount={song.likeCount}
+            commentCount={song.commentCount}
             liked={song.liked}
             isAuthed={isAuthed}
             projectId={song.id}
