@@ -1,11 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Play } from "lucide-react";
-import { AudioPlayer, type AudioPlayerHandle } from "@/components/audio-player";
 import { Comments, type CommentDTO } from "@/components/comments";
-import { toast } from "sonner";
-import { recordPlay, recordFullPlay } from "@/app/actions/plays";
+import { TrackPlayer } from "@/components/player/track-player";
+import { usePlayer, type Track } from "@/components/player/player-provider";
 import { cn } from "@/lib/utils";
 
 export type VersionDTO = {
@@ -35,6 +34,9 @@ function fmtDate(iso: string): string {
 export function SongView({
   versions,
   projectId,
+  title,
+  slug,
+  band,
   playCount,
   comments,
   currentUserId,
@@ -43,50 +45,39 @@ export function SongView({
 }: {
   versions: VersionDTO[];
   projectId: string;
+  title: string;
+  slug: string;
+  band: { username: string; displayName: string };
   playCount: number;
   comments: CommentDTO[];
   currentUserId: string | null;
   canComment: boolean;
   canModerate: boolean;
 }) {
-  // versions arrive newest-first; default the player to the latest.
+  // versions arrive newest-first; default the inline player to the latest.
   const [selectedId, setSelectedId] = useState(versions[0]?.id);
   const selected = versions.find((v) => v.id === selectedId) ?? versions[0];
 
-  const playerRef = useRef<AudioPlayerHandle>(null);
-  // When jumping to a timestamped comment on a *different* version, we switch
-  // versions and seek once that version's audio loads.
-  const [startAt, setStartAt] = useState<number | null>(null);
+  const { playTrack, isActive, getCurrentTime, playCountFor } = usePlayer();
 
+  function trackFor(v: VersionDTO): Track {
+    return {
+      projectId,
+      versionId: v.id,
+      audioUrl: v.audioUrl,
+      duration: v.duration,
+      title,
+      slug,
+      band,
+    };
+  }
+
+  // Jump to a timestamped comment: select that version and play from `seconds`.
   function jumpTo(versionId: string, seconds: number) {
-    if (versionId === selected?.id) {
-      playerRef.current?.seekTo(seconds);
-      playerRef.current?.play();
-    } else {
-      setStartAt(seconds);
-      setSelectedId(versionId);
-    }
-  }
-
-  const getCurrentTime = () => playerRef.current?.getCurrentTime() ?? 0;
-
-  // Lifetime play count for the URL, updated optimistically as you play.
-  const [plays, setPlays] = useState(playCount);
-  // Count at most one play per version per session, so resume/seek don't inflate.
-  const countedRef = useRef<Set<string>>(new Set());
-
-  function handlePlay(versionId: string) {
-    if (countedRef.current.has(versionId)) return;
-    countedRef.current.add(versionId);
-    setPlays((n) => n + 1);
-    void recordPlay(projectId);
-  }
-
-  // A full start-to-end listen rewards the listener with credits (once per song).
-  function handleEnded() {
-    void recordFullPlay(projectId).then((res) => {
-      if (res.earned > 0) toast.success(`+${res.earned} credits for listening`);
-    });
+    const v = versions.find((x) => x.id === versionId);
+    if (!v) return;
+    setSelectedId(versionId);
+    playTrack(trackFor(v), { startAt: seconds });
   }
 
   if (!selected) {
@@ -97,12 +88,15 @@ export function SongView({
     );
   }
 
+  const active = isActive(projectId, selected.id);
+  const plays = playCountFor(projectId, playCount);
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
         <div className="flex items-baseline justify-between gap-2">
           <h2 className="text-sm font-medium text-muted-foreground">
-            Now playing — v{selected.versionNumber}
+            v{selected.versionNumber}
             {selected.versionNumber === versions[0].versionNumber && " (latest)"}
           </h2>
           <span
@@ -113,15 +107,11 @@ export function SongView({
             {plays.toLocaleString()} {plays === 1 ? "play" : "plays"}
           </span>
         </div>
-        <AudioPlayer
-          ref={playerRef}
-          src={selected.audioUrl}
-          initialDuration={selected.duration}
-          onPlay={() => handlePlay(selected.id)}
-          onEnded={handleEnded}
-          autoPlay={startAt != null}
-          startAt={startAt}
-          onStartConsumed={() => setStartAt(null)}
+        <TrackPlayer
+          track={trackFor(selected)}
+          onStart={(startAt) =>
+            playTrack(trackFor(selected), startAt != null ? { startAt } : undefined)
+          }
         />
       </div>
 
@@ -129,14 +119,14 @@ export function SongView({
         <h3 className="mb-3 text-sm font-medium">Version history</h3>
         <ol className="relative space-y-0 border-l pl-5">
           {versions.map((v) => {
-            const active = v.id === selected.id;
+            const isSelected = v.id === selected.id;
             const dur = fmtDuration(v.duration);
             return (
               <li key={v.id} className="relative pb-5 last:pb-0">
                 <span
                   className={cn(
                     "absolute -left-[1.4rem] top-1.5 size-2.5 rounded-full ring-4 ring-background",
-                    active ? "bg-primary" : "bg-muted-foreground/40",
+                    isSelected ? "bg-primary" : "bg-muted-foreground/40",
                   )}
                 />
                 <button
@@ -144,7 +134,7 @@ export function SongView({
                   onClick={() => setSelectedId(v.id)}
                   className={cn(
                     "w-full rounded-md border px-3 py-2 text-left transition-colors",
-                    active ? "border-primary bg-accent" : "hover:bg-accent/50",
+                    isSelected ? "border-primary bg-accent" : "hover:bg-accent/50",
                   )}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -172,7 +162,7 @@ export function SongView({
         currentUserId={currentUserId}
         canComment={canComment}
         canModerate={canModerate}
-        getCurrentTime={getCurrentTime}
+        getCurrentTime={() => (active ? getCurrentTime() : 0)}
         onJumpTo={jumpTo}
       />
     </div>

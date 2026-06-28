@@ -124,6 +124,12 @@ export default async function ProjectPage({
       <SongView
         versions={versions}
         projectId={project.id}
+        title={project.title}
+        slug={project.slug}
+        band={{
+          username: project.band.username,
+          displayName: project.band.displayName,
+        }}
         playCount={project.playCount}
         comments={comments}
         currentUserId={user.id}

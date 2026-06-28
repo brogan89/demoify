@@ -124,6 +124,10 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Reserve room for the fixed bottom player so it never covers the footer. */
+  body[data-player-active="true"] {
+    padding-bottom: 8rem;
+  }
   html {
     @apply font-sans;
   }

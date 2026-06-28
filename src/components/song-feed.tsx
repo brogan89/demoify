@@ -1,13 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
 import Link from "next/link";
 import { Music4 } from "lucide-react";
-import { toast } from "sonner";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AudioPlayer, type AudioPlayerHandle } from "@/components/audio-player";
 import { SongCard, SongStats, type SongCardData } from "@/components/song-card";
-import { recordPlay, recordFullPlay } from "@/app/actions/plays";
+import { TrackPlayer } from "@/components/player/track-player";
+import { usePlayer, type Track } from "@/components/player/player-provider";
 
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -17,13 +15,28 @@ function fmtDate(iso: string): string {
   });
 }
 
+function toTrack(card: SongCardData): Track {
+  const v = card.version!;
+  return {
+    projectId: card.id,
+    versionId: v.id,
+    audioUrl: v.audioUrl,
+    duration: v.duration,
+    title: card.title,
+    slug: card.slug,
+    band: card.band,
+  };
+}
+
 /**
  * A single column of song cards, each playable inline (with the shared waveform)
  * and likeable, clicking through to the song page for comments and version
  * history. Used app-wide — Explore, band/artist pages, and Library — so song
  * listings look and behave identically everywhere. Federated cards have no local
- * version and fall back to SongCard's link-out. Playback is continuous — only one
- * song plays at a time and finishing a song auto-advances to the next playable one.
+ * version and fall back to SongCard's link-out. Playback is handled by the global
+ * player ({@link PlayerProvider}): playing a card queues the rest of the feed, only
+ * one song plays at a time, and finishing one auto-advances to the next — all of
+ * which persists in the bottom bar as the user navigates away.
  */
 export function SongFeed({
   entries,
@@ -32,38 +45,12 @@ export function SongFeed({
   entries: SongCardData[];
   isAuthed: boolean;
 }) {
-  // The ordered list of playable (local) songs and a player ref per song, so we can
-  // pause the others when one starts and advance to the next when one ends.
+  const { playQueue, playCountFor } = usePlayer();
+
+  // The ordered list of playable (local) songs becomes the queue when one starts.
   const playable = entries.filter((e) => e.version);
-  const playerRefs = useRef<Map<string, AudioPlayerHandle | null>>(new Map());
-
-  // Lifetime play counts, bumped optimistically on first play of each song.
-  const [plays, setPlays] = useState<Record<string, number>>(() =>
-    Object.fromEntries(playable.map((e) => [e.id, e.playCount])),
-  );
-  // Count at most one play per song per session, so resume/seek don't inflate.
-  const countedRef = useRef<Set<string>>(new Set());
-
-  function handlePlay(id: string) {
-    // Only one at a time: pause every other player.
-    for (const [otherId, ref] of playerRefs.current) {
-      if (otherId !== id) ref?.pause();
-    }
-    if (countedRef.current.has(id)) return;
-    countedRef.current.add(id);
-    setPlays((p) => ({ ...p, [id]: (p[id] ?? 0) + 1 }));
-    void recordPlay(id);
-  }
-
-  function handleEnded(id: string) {
-    void recordFullPlay(id).then((res) => {
-      if (res.earned > 0) toast.success(`+${res.earned} credits for listening`);
-    });
-    // Auto-advance to the next playable song in the feed.
-    const idx = playable.findIndex((e) => e.id === id);
-    const next = playable[idx + 1];
-    if (next) playerRefs.current.get(next.id)?.play();
-  }
+  const tracks = playable.map(toTrack);
+  const indexById = new Map(playable.map((e, i) => [e.id, i]));
 
   return (
     <ul className="flex flex-col gap-3">
@@ -95,7 +82,7 @@ export function SongFeed({
                 </Link>
                 <CardAction>
                   <SongStats
-                    playCount={plays[card.id] ?? card.playCount}
+                    playCount={playCountFor(card.id, card.playCount)}
                     likeCount={card.likeCount}
                     liked={card.liked}
                     isAuthed={isAuthed}
@@ -104,14 +91,15 @@ export function SongFeed({
                 </CardAction>
               </CardHeader>
               <CardContent>
-                <AudioPlayer
-                  ref={(h) => {
-                    playerRefs.current.set(card.id, h);
-                  }}
-                  src={card.version.audioUrl}
-                  initialDuration={card.version.duration}
-                  onPlay={() => handlePlay(card.id)}
-                  onEnded={() => handleEnded(card.id)}
+                <TrackPlayer
+                  track={tracks[indexById.get(card.id)!]}
+                  onStart={(startAt) =>
+                    playQueue(
+                      tracks,
+                      indexById.get(card.id)!,
+                      startAt != null ? { startAt } : undefined,
+                    )
+                  }
                 />
               </CardContent>
             </Card>

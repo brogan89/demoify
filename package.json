@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:remote": "DEV_REMOTE_DB=1 next dev",
+    "db:pull": "node scripts/pull-prod-db.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

@@ -5,6 +5,14 @@ import { Toaster } from "@/components/ui/sonner";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ThemeProvider } from "@/components/theme-provider";
+import { PlayerProvider } from "@/components/player/player-provider";
+import { PlayerBar } from "@/components/player/player-bar";
+import { DevDbPullButton } from "@/components/dev/dev-db-pull-button";
+
+// Only under plain `npm run dev` — never in production or `dev:remote` (which
+// reads the remote DB, so there's nothing local to populate).
+const showDevDbPull =
+  process.env.NODE_ENV !== "production" && process.env.DEV_REMOTE_DB !== "1";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,9 +43,13 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <SiteHeader />
-          <main className="flex-1">{children}</main>
-          <SiteFooter />
+          <PlayerProvider>
+            <SiteHeader />
+            <main className="flex-1">{children}</main>
+            <SiteFooter />
+            <PlayerBar />
+            {showDevDbPull && <DevDbPullButton />}
+          </PlayerProvider>
           <Toaster richColors />
         </ThemeProvider>
       </body>
