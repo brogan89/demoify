@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Music4 } from "lucide-react";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { SongCard, SongStats, type SongCardData } from "@/components/song-card";
+import { PrivateBadge, SongCard, SongStats, type SongCardData } from "@/components/song-card";
 import { TrackPlayer } from "@/components/player/track-player";
 import { usePlayer, type Track } from "@/components/player/player-provider";
 
@@ -73,6 +73,7 @@ export function SongFeed({
                   >
                     v{card.version.versionNumber} · {fmtDate(card.version.uploadedAt)}
                   </span>
+                  {card.isPrivate && <PrivateBadge />}
                 </CardTitle>
                 <Link
                   href={`/${card.band.username}`}

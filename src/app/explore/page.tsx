@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Search } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
+import { getMyBands } from "@/lib/band";
 import { Input } from "@/components/ui/input";
 import { type SongCardData } from "@/components/song-card";
 import { SongFeed } from "@/components/song-feed";
@@ -33,24 +34,37 @@ export default async function ExplorePage({
   const user = await getCurrentUser();
   // Empty id matches no rows, so logged-out users get liked=false everywhere.
   const viewerId = user?.id ?? "";
+  // The viewer's own bands — so their private songs surface in the feed too. Empty
+  // for logged-out users, collapsing the visibility filter to public-only.
+  const memberBandIds = (await getMyBands()).map((b) => b.band.id);
 
   const songs = await prisma.songProject.findMany({
     where: {
-      visibility: "PUBLIC",
       versions: { some: {} },
       ...(genre ? { genre } : {}),
       ...(subgenre ? { subgenre } : {}),
-      // Match the query against the song title or the band's name/handle.
+      // Public songs plus the viewer's own bands' private songs; AND-combined with the
+      // optional search OR so the two ORs don't collide on the same `where` key.
       // SQLite `contains` (LIKE) is case-insensitive for ASCII.
-      ...(q
-        ? {
-            OR: [
-              { title: { contains: q } },
-              { band: { displayName: { contains: q } } },
-              { band: { username: { contains: q } } },
-            ],
-          }
-        : {}),
+      AND: [
+        {
+          OR: [
+            { visibility: "PUBLIC" },
+            { visibility: "PRIVATE", bandId: { in: memberBandIds } },
+          ],
+        },
+        ...(q
+          ? [
+              {
+                OR: [
+                  { title: { contains: q } },
+                  { band: { displayName: { contains: q } } },
+                  { band: { username: { contains: q } } },
+                ],
+              },
+            ]
+          : []),
+      ],
     },
     orderBy:
       sort === "popular"
@@ -83,6 +97,7 @@ export default async function ExplorePage({
       likeCount: s._count.likes,
       commentCount: s._count.comments,
       liked: s.likes.length > 0,
+      isPrivate: s.visibility === "PRIVATE",
       band: s.band,
       version: { ...s.versions[0], uploadedAt: s.versions[0].uploadedAt.toISOString() },
     },
@@ -117,6 +132,7 @@ export default async function ExplorePage({
         likeCount: t.likeCount,
         commentCount: 0,
         liked: false,
+        isPrivate: false,
         band: { username: "", displayName: t.artistName },
         external: { trackUrl: t.trackUrl, artistUrl: t.artistUrl, originName: t.instance.name },
       },

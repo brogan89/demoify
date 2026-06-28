@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Globe, Heart, MessageCircle, Music4, Play } from "lucide-react";
+import { Globe, Heart, Lock, MessageCircle, Music4, Play } from "lucide-react";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LikeButton } from "@/components/like-button";
 
@@ -11,6 +11,9 @@ export type SongCardData = {
   likeCount: number;
   commentCount: number;
   liked: boolean;
+  // True for a band's private songs — only ever sent to that band's members (see the
+  // feed queries), surfaced with a Private badge so they're distinguishable.
+  isPrivate: boolean;
   band: { username: string; displayName: string };
   // Latest playable version, for inline playback in the Explore feed. Absent on
   // federated cards (which link out to their origin instead) — see SongFeed.
@@ -27,6 +30,19 @@ export type SongCardData = {
   // disabled — there's no local song to like.
   external?: { trackUrl: string; artistUrl: string; originName: string };
 };
+
+/** Small pill marking a private song, shown only to the band's own members. */
+export function PrivateBadge() {
+  return (
+    <span
+      className="inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs font-normal text-muted-foreground"
+      title="Only visible to your band"
+    >
+      <Lock className="size-3" />
+      Private
+    </span>
+  );
+}
 
 /**
  * Plays + like, shown in the top-right of a song card's header (the `CardAction`

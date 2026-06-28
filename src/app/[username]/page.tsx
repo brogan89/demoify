@@ -48,23 +48,26 @@ export default async function ArtistProfilePage({
   if (!band) notFound();
 
   const viewerId = currentUser?.id ?? "";
-  const [songs, role] = await Promise.all([
-    prisma.songProject.findMany({
-      where: { bandId: band.id, visibility: "PUBLIC", versions: { some: {} } },
-      orderBy: { createdAt: "desc" },
-      include: {
-        _count: { select: { likes: true, comments: true } },
-        likes: { where: { userId: viewerId }, select: { id: true } },
-        // Latest version powers inline playback in the feed.
-        versions: {
-          orderBy: { versionNumber: "desc" },
-          take: 1,
-          select: { id: true, audioUrl: true, duration: true, versionNumber: true, uploadedAt: true },
-        },
+  // Members see this band's private songs too; everyone else only public.
+  const role = currentUser ? await getMembership(band.id, currentUser.id) : null;
+  const songs = await prisma.songProject.findMany({
+    where: {
+      bandId: band.id,
+      versions: { some: {} },
+      ...(isMember(role) ? {} : { visibility: "PUBLIC" }),
+    },
+    orderBy: { createdAt: "desc" },
+    include: {
+      _count: { select: { likes: true, comments: true } },
+      likes: { where: { userId: viewerId }, select: { id: true } },
+      // Latest version powers inline playback in the feed.
+      versions: {
+        orderBy: { versionNumber: "desc" },
+        take: 1,
+        select: { id: true, audioUrl: true, duration: true, versionNumber: true, uploadedAt: true },
       },
-    }),
-    currentUser ? getMembership(band.id, currentUser.id) : Promise.resolve(null),
-  ]);
+    },
+  });
 
   const entries: SongCardData[] = songs.map((s) => ({
     id: s.id,
@@ -74,6 +77,7 @@ export default async function ArtistProfilePage({
     likeCount: s._count.likes,
     commentCount: s._count.comments,
     liked: s.likes.length > 0,
+    isPrivate: s.visibility === "PRIVATE",
     band: { username: band.username, displayName: band.displayName },
     version: { ...s.versions[0], uploadedAt: s.versions[0].uploadedAt.toISOString() },
   }));

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { Heart } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
+import { getMyBands } from "@/lib/band";
 import { SongFeed } from "@/components/song-feed";
 import { type SongCardData } from "@/components/song-card";
 
@@ -16,9 +17,21 @@ export default async function LibraryPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  // Liked songs that are still public and playable, newest-liked first.
+  // A song can be liked while public then later made private; members still see those.
+  const memberBandIds = (await getMyBands()).map((b) => b.band.id);
+
+  // Liked, playable songs (public, or private from the viewer's own bands), newest first.
   const likes = await prisma.like.findMany({
-    where: { userId: user.id, project: { visibility: "PUBLIC", versions: { some: {} } } },
+    where: {
+      userId: user.id,
+      project: {
+        versions: { some: {} },
+        OR: [
+          { visibility: "PUBLIC" },
+          { visibility: "PRIVATE", bandId: { in: memberBandIds } },
+        ],
+      },
+    },
     orderBy: { createdAt: "desc" },
     include: {
       project: {
@@ -44,6 +57,7 @@ export default async function LibraryPage() {
     likeCount: l.project._count.likes,
     commentCount: l.project._count.comments,
     liked: true,
+    isPrivate: l.project.visibility === "PRIVATE",
     band: { username: l.project.band.username, displayName: l.project.band.displayName },
     version: {
       ...l.project.versions[0],
