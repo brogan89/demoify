@@ -24,10 +24,13 @@ function fmtDuration(d: number | null): string | null {
 }
 
 function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
+  // Pin locale + timeZone so server and client render identical text (avoids a
+  // React hydration mismatch).
+  return new Date(iso).toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
+    timeZone: "UTC",
   });
 }
 
@@ -104,7 +107,7 @@ export function SongView({
             title="Total plays"
           >
             <Play className="size-3 fill-current" />
-            {plays.toLocaleString()} {plays === 1 ? "play" : "plays"}
+            {plays.toLocaleString("en-US")} {plays === 1 ? "play" : "plays"}
           </span>
         </div>
         <TrackPlayer

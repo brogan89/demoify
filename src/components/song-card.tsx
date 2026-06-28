@@ -72,16 +72,16 @@ export function SongStats({
     <div className="flex items-center gap-2 text-xs text-muted-foreground">
       <span className="flex items-center gap-1" title="Plays">
         <Play className="size-3 fill-current" />
-        {playCount.toLocaleString()}
+        {playCount.toLocaleString("en-US")}
       </span>
       <span className="flex items-center gap-1" title="Comments">
         <MessageCircle className="size-3" />
-        {commentCount.toLocaleString()}
+        {commentCount.toLocaleString("en-US")}
       </span>
       {external ? (
         <span className="flex items-center gap-1" title="Likes">
           <Heart className="size-3 fill-current" />
-          {likeCount.toLocaleString()}
+          {likeCount.toLocaleString("en-US")}
         </span>
       ) : (
         <LikeButton

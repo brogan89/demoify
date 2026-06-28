@@ -25,14 +25,14 @@ export function ShareLink({ path }: { path: string }) {
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <code className="truncate rounded-lg border border-input bg-muted/40 px-2.5 py-1 text-sm text-muted-foreground">
+    <div className="flex min-w-0 items-center gap-2">
+      <code className="min-w-0 flex-1 truncate rounded-lg border border-input bg-muted/40 px-2.5 py-1 text-sm text-muted-foreground">
         {display}
       </code>
       <Button
         variant="outline"
         size="sm"
-        className="gap-1.5"
+        className="shrink-0 gap-1.5"
         onClick={onCopy}
         aria-label="Copy link to clipboard"
       >

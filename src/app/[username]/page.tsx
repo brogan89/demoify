@@ -94,7 +94,7 @@ export default async function ArtistProfilePage({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h1 className="truncate text-2xl font-semibold">{band.displayName}</h1>
-              <p className="font-mono text-xs text-muted-foreground">demoify.app/{band.username}</p>
+              <p className="truncate font-mono text-xs text-muted-foreground">demoify.app/{band.username}</p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <TipButton
@@ -113,7 +113,7 @@ export default async function ArtistProfilePage({
               )}
             </div>
           </div>
-          {band.bio && <p className="mt-3 max-w-prose text-sm text-muted-foreground">{band.bio}</p>}
+          {band.bio && <p className="mt-3 max-w-prose text-sm break-words text-muted-foreground">{band.bio}</p>}
           <SocialLinks links={parseSocialLinks(band.socialLinks)} />
         </div>
       </header>

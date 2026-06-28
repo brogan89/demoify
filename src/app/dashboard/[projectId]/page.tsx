@@ -70,9 +70,9 @@ export default async function ProjectPage({
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <div className="mb-6">
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="text-2xl font-semibold">{project.title}</h1>
-          <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="min-w-0 text-2xl font-semibold break-words">{project.title}</h1>
+          <div className="flex flex-wrap items-center gap-3">
             <Link
               href={publicPath}
               className="flex items-center gap-1 text-sm text-primary underline-offset-4 hover:underline"
@@ -86,9 +86,9 @@ export default async function ProjectPage({
           </div>
         </div>
         {project.description && (
-          <p className="mt-1 text-sm text-muted-foreground">{project.description}</p>
+          <p className="mt-1 text-sm break-words text-muted-foreground">{project.description}</p>
         )}
-        <p className="mt-2 font-mono text-xs text-muted-foreground">
+        <p className="mt-2 font-mono text-xs break-all text-muted-foreground">
           demoify.app{publicPath}
         </p>
         {canManage ? (

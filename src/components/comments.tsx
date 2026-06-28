@@ -24,10 +24,13 @@ export type CommentDTO = {
 };
 
 function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
+  // Pin locale + timeZone so server and client render identical text (avoids a
+  // React hydration mismatch).
+  return new Date(iso).toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
+    timeZone: "UTC",
   });
 }
 
@@ -229,7 +232,7 @@ export function Comments({
                       </button>
                     )}
                   </div>
-                  <p className="mt-0.5 text-sm whitespace-pre-wrap">{c.body}</p>
+                  <p className="mt-0.5 text-sm break-words whitespace-pre-wrap">{c.body}</p>
                 </div>
               </li>
             );

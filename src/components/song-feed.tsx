@@ -8,10 +8,13 @@ import { TrackPlayer } from "@/components/player/track-player";
 import { usePlayer, type Track } from "@/components/player/player-provider";
 
 function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
+  // Pin locale + timeZone so the server and client render identical text — a
+  // locale/zone-dependent format causes React hydration mismatches.
+  return new Date(iso).toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
+    timeZone: "UTC",
   });
 }
 

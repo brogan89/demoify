@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SignOutButton } from "@/components/sign-out-button";
 import { BandSwitcher } from "@/components/band-switcher";
+import { MobileNav } from "@/components/mobile-nav";
 import { getCurrentUser } from "@/lib/session";
 import { getMyBands, getActiveBand } from "@/lib/band";
 import { creditsEnabled } from "@/lib/credits";
@@ -21,7 +22,18 @@ export async function SiteHeader() {
           <Disc3 className="size-5 text-primary" suppressHydrationWarning />
           Demoify
         </Link>
-        <nav className="flex items-center gap-2">
+        {/* Below sm the inline nav doesn't fit portrait phones — collapse to a menu. */}
+        <div className="flex items-center gap-1 sm:hidden">
+          <ThemeToggle />
+          <MobileNav
+            isAuthed={Boolean(user)}
+            hasBand={Boolean(active)}
+            bandName={active?.band.displayName ?? null}
+            credits={active?.band.credits ?? null}
+            showCredits={creditsEnabled()}
+          />
+        </div>
+        <nav className="hidden items-center gap-2 sm:flex">
           <a
             href="https://github.com/brogan89/demoify"
             target="_blank"

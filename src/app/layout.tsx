@@ -8,11 +8,14 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { PlayerProvider } from "@/components/player/player-provider";
 import { PlayerBar } from "@/components/player/player-bar";
 import { DevDbPullButton } from "@/components/dev/dev-db-pull-button";
+import { DevViewportToggle } from "@/components/dev/dev-viewport-toggle";
 
 // Only under plain `npm run dev` — never in production or `dev:remote` (which
 // reads the remote DB, so there's nothing local to populate).
 const showDevDbPull =
   process.env.NODE_ENV !== "production" && process.env.DEV_REMOTE_DB !== "1";
+// The viewport preview is purely visual, so it's useful in dev and dev:remote.
+const showDevTools = process.env.NODE_ENV !== "production";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -49,6 +52,7 @@ export default function RootLayout({
             <SiteFooter />
             <PlayerBar />
             {showDevDbPull && <DevDbPullButton />}
+            {showDevTools && <DevViewportToggle />}
           </PlayerProvider>
           <Toaster richColors />
         </ThemeProvider>

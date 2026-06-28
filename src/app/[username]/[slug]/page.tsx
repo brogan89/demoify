@@ -106,12 +106,12 @@ export default async function PublicSongPage({
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <div className="mb-6 flex items-start gap-3">
-        <Disc3 className="mt-1 size-7 text-primary" />
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold">
+        <Disc3 className="mt-1 size-7 shrink-0 text-primary" />
+        <div className="min-w-0">
+          <h1 className="flex items-center gap-2 text-2xl font-semibold break-words">
             {project.title}
             {isPrivate && (
-              <Lock className="size-4 text-muted-foreground" aria-label="Private" />
+              <Lock className="size-4 shrink-0 text-muted-foreground" aria-label="Private" />
             )}
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -124,7 +124,7 @@ export default async function PublicSongPage({
             </Link>
           </p>
           {project.description && (
-            <p className="mt-2 max-w-prose text-sm text-muted-foreground">
+            <p className="mt-2 max-w-prose text-sm break-words text-muted-foreground">
               {project.description}
             </p>
           )}
@@ -139,7 +139,7 @@ export default async function PublicSongPage({
 
       <TipResultToast bandName={project.band.displayName} />
 
-      <div className="mb-6 flex items-center gap-3">
+      <div className="mb-6 flex flex-wrap items-center gap-3">
         <ShareLink path={`${project.band.username}/${slug}`} />
         {!isPrivate && (
           <LikeButton
