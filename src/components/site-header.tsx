@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Coins, Disc3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { SignOutButton } from "@/components/sign-out-button";
+import { AccountMenu } from "@/components/account-menu";
 import { BandSwitcher } from "@/components/band-switcher";
 import { MobileNav } from "@/components/mobile-nav";
 import { getCurrentUser } from "@/lib/session";
@@ -17,14 +17,17 @@ export async function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2 font-semibold">
-          <Disc3 className="size-5 text-primary" suppressHydrationWarning />
+      <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
+        <Link href="/" className="flex items-center gap-2 text-lg font-semibold">
+          <Disc3 className="size-6 text-primary" suppressHydrationWarning />
           Demoify
         </Link>
-        {/* Below sm the inline nav doesn't fit portrait phones — collapse to a menu. */}
-        <div className="flex items-center gap-1 sm:hidden">
-          <ThemeToggle />
+        {/* Below md the inline nav doesn't fit at the larger sizing — collapse to a menu.
+            Explore stays inline (primary nav); theme toggle lives in the menu only. */}
+        <div className="flex items-center gap-2 md:hidden">
+          <Button asChild variant="ghost" size="lg" className="text-base">
+            <Link href="/explore">Explore</Link>
+          </Button>
           <MobileNav
             isAuthed={Boolean(user)}
             hasBand={Boolean(active)}
@@ -33,27 +36,26 @@ export async function SiteHeader() {
             showCredits={creditsEnabled()}
           />
         </div>
-        <nav className="hidden items-center gap-2 sm:flex">
+        <nav className="hidden items-center gap-3 md:flex">
           <a
             href="https://github.com/brogan89/demoify"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Demoify on GitHub"
             title="View on GitHub"
-            className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
+            className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
           >
             <GithubIcon className="size-5" />
           </a>
-          <ThemeToggle />
-          <Button asChild variant="ghost" size="sm">
+          <Button asChild variant="ghost" size="lg" className="text-base">
             <Link href="/explore">Explore</Link>
           </Button>
-          <Button asChild variant="ghost" size="sm">
+          <Button asChild variant="ghost" size="lg" className="text-base">
             <Link href="/artists">Artists</Link>
           </Button>
           {user && active ? (
             <>
-              <Button asChild variant="ghost" size="sm">
+              <Button asChild variant="ghost" size="lg" className="text-base">
                 <Link href="/library">Library</Link>
               </Button>
               <BandSwitcher
@@ -67,42 +69,44 @@ export async function SiteHeader() {
               {creditsEnabled() && (
                 <Link
                   href="/dashboard/credits"
-                  className="flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                  className="flex items-center gap-2 rounded-full border px-4 py-1.5 text-base text-muted-foreground transition-colors hover:text-foreground"
                   title="Buy credits"
                 >
-                  <Coins className="size-3.5 text-primary" suppressHydrationWarning />
+                  <Coins className="size-4 text-primary" suppressHydrationWarning />
                   {active.band.credits}
                 </Link>
               )}
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/dashboard">Dashboard</Link>
-              </Button>
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/dashboard/settings">Settings</Link>
-              </Button>
-              <SignOutButton />
+              <AccountMenu
+                displayName={user.displayName ?? user.name}
+                avatarUrl={user.avatarUrl ?? null}
+                hasBand={true}
+              />
             </>
           ) : user ? (
             // Signed in but no artist profile yet — a listener. Give them the
             // full listening nav, with creating a profile as a low-key option.
             <>
-              <Button asChild variant="ghost" size="sm">
+              <Button asChild variant="ghost" size="lg" className="text-base">
                 <Link href="/library">Library</Link>
               </Button>
-              <Button asChild variant="ghost" size="sm">
+              <Button asChild variant="outline" size="lg" className="text-base">
                 <Link href="/dashboard/new-artist">Create artist profile</Link>
               </Button>
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/dashboard/settings">Settings</Link>
-              </Button>
-              <SignOutButton />
+              <AccountMenu
+                displayName={user.displayName ?? user.name}
+                avatarUrl={user.avatarUrl ?? null}
+                hasBand={false}
+              />
             </>
           ) : (
+            // Logged out — no account menu to hold the theme toggle, so it
+            // stays inline here only.
             <>
-              <Button asChild variant="ghost" size="sm">
+              <ThemeToggle />
+              <Button asChild variant="ghost" size="lg" className="text-base">
                 <Link href="/login">Log in</Link>
               </Button>
-              <Button asChild size="sm">
+              <Button asChild size="lg" className="text-base">
                 <Link href="/signup">Sign up</Link>
               </Button>
             </>

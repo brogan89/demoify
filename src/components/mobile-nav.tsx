@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { signOut } from "@/lib/auth-client";
+import { ThemeToggleMenuItem } from "@/components/theme-toggle";
 
 /**
  * The site nav collapsed into a hamburger menu for narrow (portrait phone)
@@ -43,40 +44,40 @@ export function MobileNav({
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label="Menu"
-        className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
+        className="inline-flex size-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
       >
-        <Menu className="size-5" />
+        <Menu className="size-6" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-64 p-1.5">
         {isAuthed && hasBand && bandName && (
           <>
             <DropdownMenuLabel className="truncate">{bandName}</DropdownMenuLabel>
             <DropdownMenuSeparator />
           </>
         )}
-        <DropdownMenuItem asChild>
+        <DropdownMenuItem asChild className="px-2 py-2 text-base">
           <Link href="/explore">Explore</Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
+        <DropdownMenuItem asChild className="px-2 py-2 text-base">
           <Link href="/artists">Artists</Link>
         </DropdownMenuItem>
         {isAuthed && (
-          <DropdownMenuItem asChild>
+          <DropdownMenuItem asChild className="px-2 py-2 text-base">
             <Link href="/library">Library</Link>
           </DropdownMenuItem>
         )}
         {isAuthed && hasBand && (
           <>
-            <DropdownMenuItem asChild>
+            <DropdownMenuItem asChild className="px-2 py-2 text-base">
               <Link href="/dashboard">Dashboard</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
+            <DropdownMenuItem asChild className="px-2 py-2 text-base">
               <Link href="/dashboard/band">Manage artist</Link>
             </DropdownMenuItem>
             {showCredits && (
-              <DropdownMenuItem asChild>
+              <DropdownMenuItem asChild className="px-2 py-2 text-base">
                 <Link href="/dashboard/credits" className="flex items-center gap-2">
-                  <Coins className="size-3.5 text-primary" />
+                  <Coins className="size-4 text-primary" />
                   {credits} credits
                 </Link>
               </DropdownMenuItem>
@@ -84,29 +85,32 @@ export function MobileNav({
           </>
         )}
         {isAuthed && !hasBand && (
-          <DropdownMenuItem asChild>
+          <DropdownMenuItem asChild className="px-2 py-2 text-base">
             <Link href="/dashboard/new-artist">Create artist profile</Link>
           </DropdownMenuItem>
         )}
         {isAuthed && (
-          <DropdownMenuItem asChild>
+          <DropdownMenuItem asChild className="px-2 py-2 text-base">
             <Link href="/dashboard/settings">Settings</Link>
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem asChild>
+        <DropdownMenuItem asChild className="px-2 py-2 text-base">
           <a href="https://github.com/brogan89/demoify" target="_blank" rel="noopener noreferrer">
             GitHub
           </a>
         </DropdownMenuItem>
+        <ThemeToggleMenuItem className="px-2 py-2 text-base" />
         <DropdownMenuSeparator />
         {isAuthed ? (
-          <DropdownMenuItem onSelect={() => void handleSignOut()}>Sign out</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => void handleSignOut()} className="px-2 py-2 text-base">
+            Sign out
+          </DropdownMenuItem>
         ) : (
           <>
-            <DropdownMenuItem asChild>
+            <DropdownMenuItem asChild className="px-2 py-2 text-base">
               <Link href="/login">Log in</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
+            <DropdownMenuItem asChild className="px-2 py-2 text-base">
               <Link href="/signup">Sign up</Link>
             </DropdownMenuItem>
           </>

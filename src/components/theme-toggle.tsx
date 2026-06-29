@@ -3,6 +3,7 @@
 import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -14,15 +15,32 @@ export function ThemeToggle() {
   return (
     <Button
       variant="ghost"
-      size="icon"
+      size="icon-lg"
       onClick={toggle}
       aria-label="Toggle theme"
       title="Toggle theme"
     >
       {/* Sun shows in light mode, moon in dark mode; CSS swaps them so there's
           no hydration flash from reading the theme on the client. */}
+      <Sun className="size-5 dark:hidden" suppressHydrationWarning />
+      <Moon className="hidden size-5 dark:block" suppressHydrationWarning />
+    </Button>
+  );
+}
+
+/** Same toggle, as a dropdown item — used inside the account menu and mobile nav menu. */
+export function ThemeToggleMenuItem({ className }: { className?: string }) {
+  const { resolvedTheme, setTheme } = useTheme();
+
+  function toggle() {
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+  }
+
+  return (
+    <DropdownMenuItem onSelect={toggle} className={className}>
       <Sun className="size-4 dark:hidden" suppressHydrationWarning />
       <Moon className="hidden size-4 dark:block" suppressHydrationWarning />
-    </Button>
+      Toggle theme
+    </DropdownMenuItem>
   );
 }
