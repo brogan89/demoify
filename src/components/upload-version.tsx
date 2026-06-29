@@ -157,7 +157,11 @@ export function UploadVersion({
       )}
       <Button type="submit" disabled={busy} className="gap-2">
         <Upload className="size-4" />
-        {busy ? "Uploading…" : "Upload version"}
+        {busy
+          ? "Uploading…"
+          : creditsRequired
+            ? `Upload version · ${UPLOAD_COST} credits`
+            : "Upload version"}
       </Button>
     </form>
   );

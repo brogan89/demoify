@@ -215,7 +215,13 @@ export function CreateSongForm({
         disabled={busy || (Boolean(file) && uploadsEnabled && !canAfford)}
         className="w-full"
       >
-        {busy ? (progress > 0 ? "Uploading…" : "Creating…") : "Create song"}
+        {busy
+          ? progress > 0
+            ? "Uploading…"
+            : "Creating…"
+          : file && uploadsEnabled && creditsRequired
+            ? `Create song · ${UPLOAD_COST} credits`
+            : "Create song"}
       </Button>
     </form>
   );
