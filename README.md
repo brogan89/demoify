@@ -281,6 +281,7 @@ lived in a local `.env`:
 - [`docs/admin.md`](docs/admin.md) — operator tooling: coupon administration and gifting credits.
 - [`docs/tipping.md`](docs/tipping.md) — artist payouts via Stripe Connect.
 - [`docs/federation.md`](docs/federation.md) — the federated Explore protocol.
+- [`docs/changelog.md`](docs/changelog.md) — chronological log of feature plans and decisions, for project history.
 - [Next.js](https://nextjs.org/docs) · [Prisma](https://www.prisma.io/docs) · [Better Auth](https://www.better-auth.com/docs) · [OpenNext for Cloudflare](https://opennext.js.org/cloudflare)
 
 ## Feedback

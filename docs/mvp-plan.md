@@ -4,6 +4,7 @@
 > for reference. A few things drifted during implementation — see
 > **As-built deviations** at the bottom before treating any detail here as current.
 > The credit/payment system was added later; see [credits-and-payments.md](./credits-and-payments.md).
+> Everything built after the MVP is logged chronologically in [changelog.md](./changelog.md).
 
 ## Context
 
