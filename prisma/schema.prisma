@@ -115,10 +115,11 @@ model Band {
   payoutsEnabled  Boolean @default(false)
   createdAt   DateTime @default(now())
 
-  memberships  BandMembership[]
-  projects     SongProject[]
-  transactions CreditTransaction[]
-  tips         Tip[]
+  memberships       BandMembership[]
+  projects          SongProject[]
+  transactions      CreditTransaction[]
+  tips              Tip[]
+  couponRedemptions CouponRedemption[]
 
   @@map("band")
 }
@@ -196,13 +197,16 @@ model CreditTransaction {
   bandId          String
   band            Band     @relation(fields: [bandId], references: [id], onDelete: Cascade)
   delta           Int // positive = added, negative = spent
-  reason          String // "upload" | "purchase" | "like" | "comment" | "play"
+  reason          String // "upload" | "purchase" | "like" | "comment" | "play" | "coupon" | "gift"
   stripeSessionId String?  @unique
   // Engagement grants only: the user who engaged and the song (projectId) they
   // engaged with. Null for upload/purchase rows. The unique constraint caps each
   // engager to one reward per song per action.
   userId          String?
   refId           String?
+  // Admin note on a manual "gift" grant (see src/app/actions/admin.ts) — e.g.
+  // why it was given. Null for every other reason.
+  note            String?
   createdAt       DateTime @default(now())
 
   @@unique([userId, reason, refId])
@@ -233,6 +237,57 @@ model Tip {
 
   @@index([bandId])
   @@map("tip")
+}
+
+// A redeemable code issued by a platform admin (see src/lib/admin.ts), either
+// granting free credits directly or discounting a subsequent Stripe credit
+// purchase. `amount` is interpreted per `kind`: credit count for FREE_CREDITS,
+// whole percent (1-100) for PERCENT_OFF, or cents for FIXED_OFF. `active` is the
+// admin kill-switch (soft delete) — coupons are never hard-deleted, so their
+// redemption history (CouponRedemption) is never lost; see its Restrict FK.
+model Coupon {
+  id              String    @id @default(cuid())
+  code            String    @unique
+  kind            String // "FREE_CREDITS" | "PERCENT_OFF" | "FIXED_OFF"
+  amount          Int
+  maxRedemptions  Int?
+  redemptionCount Int       @default(0)
+  active          Boolean   @default(true)
+  expiresAt       DateTime?
+  createdAt       DateTime  @default(now())
+
+  redemptions CouponRedemption[]
+
+  @@map("coupon")
+}
+
+// One row per coupon redemption — the source of truth for "has this already
+// been used" for both coupon kinds, enforced two ways: one redemption per
+// band (so co-admins of the same band can't double-dip) AND one per user
+// (so a single person can't bypass the limit by switching their active band
+// to a different artist profile they also control — bandId alone isn't
+// enough, since one user can own several bands). For FREE_CREDITS this sits
+// alongside a real CreditTransaction (the actual credit-ledger entry, reason
+// "coupon"); for discount kinds this is the only record, created by the
+// Stripe webhook once payment completes (never by validateCoupon, which only
+// previews the discount before checkout) — userId reaches the webhook via
+// Checkout Session metadata, set at /api/credits/checkout time when the
+// user's session is available. couponId has no cascade delete — coupons are
+// soft-deleted via `active` specifically so this audit trail can never be lost.
+model CouponRedemption {
+  id        String   @id @default(cuid())
+  couponId  String
+  coupon    Coupon   @relation(fields: [couponId], references: [id], onDelete: Restrict)
+  bandId    String
+  band      Band     @relation(fields: [bandId], references: [id], onDelete: Cascade)
+  userId    String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([couponId, bandId])
+  @@unique([couponId, userId])
+  @@index([bandId])
+  @@map("coupon_redemption")
 }
 
 // ---------------------------------------------------------------------------

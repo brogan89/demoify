@@ -32,7 +32,10 @@ export async function POST(req: Request) {
 
     if (bandId && credits > 0 && session.payment_status === "paid") {
       // Credit purchase. Idempotent: the unique stripeSessionId means a replayed
-      // event is a no-op.
+      // event is a no-op — that's still true with the coupon writes appended
+      // below, since this whole array is one all-or-nothing transaction.
+      const couponId = session.metadata?.couponId;
+      const couponUserId = session.metadata?.userId ?? null;
       try {
         await prisma.$transaction([
           prisma.creditTransaction.create({
@@ -47,9 +50,23 @@ export async function POST(req: Request) {
             where: { id: bandId },
             data: { credits: { increment: credits } },
           }),
+          ...(couponId
+            ? [
+                prisma.couponRedemption.create({
+                  data: { couponId, bandId, userId: couponUserId },
+                }),
+                prisma.coupon.update({
+                  where: { id: couponId },
+                  data: { redemptionCount: { increment: 1 } },
+                }),
+              ]
+            : []),
         ]);
       } catch (err) {
-        // P2002 = unique violation on stripeSessionId = already processed (replay).
+        // P2002 = unique violation on stripeSessionId (replay) or on
+        // (couponId, bandId)/(couponId, userId) (shouldn't happen — checkout
+        // re-validates — but covered defensively). Either way, already-
+        // processed = no-op.
         if ((err as { code?: string }).code !== "P2002") throw err;
       }
     } else if (bandId && isTip && session.payment_status === "paid") {

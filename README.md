@@ -42,17 +42,25 @@ and is open source, so you can [host your own instance](#self-hosting) and even
 - **Bands & roles** — a *band* owns the public handle, its songs, and its credits.
   Users join bands via memberships with `ADMIN` / `MANAGER` / `MEMBER` roles; one
   account can act as several artists and switch between them.
-- **Explore** — a public discovery feed with search and a curated genre/subgenre
-  filter, sortable by recent or most-liked.
+- **Explore & Artists** — a public discovery feed with search and a curated
+  genre/subgenre filter (sortable by recent or most-liked), plus a dedicated
+  search for finding bands themselves at [`/artists`](src/app/artists/page.tsx).
+- **Account settings** — display name, avatar, email, and password are all
+  self-serve at `/dashboard/settings`, including account deletion (guarded
+  against leaving a band without an admin or orphaning songs).
 - **Credits economy (optional)** — uploads cost credits; new artists get a starter
   balance, and engaging with *other* bands' songs (likes, comments, full plays)
-  earns more. Buy top-ups via Stripe, or disable the whole economy for free,
-  unlimited uploads (see [Self-hosting](#self-hosting)).
+  earns more. Buy top-ups via Stripe, redeem free-credit or discount coupon
+  codes, or disable the whole economy for free, unlimited uploads (see
+  [Self-hosting](#self-hosting)). See [`docs/credits-and-payments.md`](docs/credits-and-payments.md).
 - **Tipping** — listeners can tip artists real money via Stripe Connect, split
   90% artist / 10% platform. See [`docs/tipping.md`](docs/tipping.md).
 - **Federated Explore** — self-hosted instances can submit their public tracks to a
   central hub so everyone shares one discovery feed, with audio still served from
   each instance's own storage. See [`docs/federation.md`](docs/federation.md).
+- **Admin tooling** — the operator can issue coupon codes and gift credits
+  directly to a band from `/admin`, gated by an email allowlist. See
+  [`docs/admin.md`](docs/admin.md).
 - **Auth** — email/password plus optional Google and Apple sign-in (Better Auth),
   with transactional email via Resend.
 
@@ -142,6 +150,7 @@ the rest enable optional features and stay dormant until configured.
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | — | Stripe — enables credit purchases and tips. |
 | `RESEND_API_KEY` / `EMAIL_FROM` | — | Resend — sends verification / reset emails (logged to console otherwise). |
 | `CREDITS_ENABLED` | — | `false` makes uploads free/unlimited and hides credit UI. Defaults to `true`. |
+| `ADMIN_EMAILS` | — | Comma-separated emails allowed to manage coupons and gift credits at `/admin`. Unset disables the section for everyone. |
 | `FEDERATION_HUB_URL` / `FEDERATION_TOKEN` | — | Submit this instance's public tracks to a shared Explore hub. |
 | `FEDERATION_HUB_ENABLED` | — | `true` makes this instance a hub that accepts submissions. |
 | `NEXT_PUBLIC_APP_VERSION` | — | Version label shown in the footer; set automatically by CI. |
@@ -176,7 +185,9 @@ npx prisma generate
 - **Credits** are a per-band balance backed by an append-only `CreditTransaction`
   ledger (uploads spend, purchases and engagement rewards add). Stripe purchases are
   applied idempotently from the webhook. Engagement rewards are granted at most once
-  per song per action. Set `CREDITS_ENABLED=false` to switch the whole system off.
+  per song per action. Coupon codes can grant free credits or discount a purchase,
+  capped to one redemption per band *and* per user. Set `CREDITS_ENABLED=false` to
+  switch the whole system off.
 - **Explore** lists public songs that have at least one uploaded version. On a
   federation **hub**, approved tracks submitted by other instances are merged into
   the same feed and link out to their origin.
@@ -229,9 +240,10 @@ migrations/            SQL migrations applied to D1 (numbered, additive)
 prisma/schema.prisma   Data model (D1/SQLite provider)
 scripts/               Admin helpers (e.g. federation.mjs → `just federation`)
 src/app/               App Router pages + API routes (auth, upload, credits, tips, federation)
+src/app/admin/         Operator-only pages (coupons, gift credits) — see docs/admin.md
 src/components/        UI (song card/view, header/footer, upload, credits, …)
-src/lib/               Core logic: db, auth, r2, stripe, credits, engagement, federation, genres
-docs/                  Deep-dives: credits-and-payments, tipping, federation, mvp-plan
+src/lib/               Core logic: db, auth, r2, stripe, credits, engagement, federation, genres, admin
+docs/                  Deep-dives: credits-and-payments, admin, tipping, federation, mvp-plan
 DEPLOYMENT.md          Cloudflare/D1/R2/Stripe/CI setup walkthrough
 ```
 
@@ -265,7 +277,8 @@ lived in a local `.env`:
 ## Learn more
 
 - [`DEPLOYMENT.md`](DEPLOYMENT.md) — production setup on Cloudflare.
-- [`docs/credits-and-payments.md`](docs/credits-and-payments.md) — credit economy & Stripe Checkout.
+- [`docs/credits-and-payments.md`](docs/credits-and-payments.md) — credit economy, Stripe Checkout, and coupons.
+- [`docs/admin.md`](docs/admin.md) — operator tooling: coupon administration and gifting credits.
 - [`docs/tipping.md`](docs/tipping.md) — artist payouts via Stripe Connect.
 - [`docs/federation.md`](docs/federation.md) — the federated Explore protocol.
 - [Next.js](https://nextjs.org/docs) · [Prisma](https://www.prisma.io/docs) · [Better Auth](https://www.better-auth.com/docs) · [OpenNext for Cloudflare](https://opennext.js.org/cloudflare)

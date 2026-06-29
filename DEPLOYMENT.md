@@ -103,10 +103,15 @@ npx wrangler secret put GOOGLE_CLIENT_SECRET
 `BETTER_AUTH_URL` is a plain var in `wrangler.jsonc` (not a secret). The database needs no
 secret — D1 is a binding.
 
-### Optional vars — credits & federation
+### Optional vars — credits, admin & federation
 
 - `CREDITS_ENABLED` — leave unset/`"true"` for demoify.app (credits on). A self-hosted
   fork that wants free uploads sets it to `"false"` (a plain var in `wrangler.jsonc` is fine).
+- `ADMIN_EMAILS` — comma-separated emails allowed to manage coupons and gift
+  credits at `/admin` (see [`docs/admin.md`](docs/admin.md)). Unset disables the
+  section for everyone. Not a credential, but contains a real email — a plain
+  var in `wrangler.jsonc` is fine, or `npx wrangler secret put ADMIN_EMAILS` if
+  you'd rather keep it out of the repo's config.
 - **Run demoify.app as a federation hub** so self-hosted instances appear in Explore: set
   `FEDERATION_HUB_ENABLED="true"` (plain var). Register each instance and mint its token with
   `just federation …` locally, or insert into D1 via `wrangler d1 execute` (see
