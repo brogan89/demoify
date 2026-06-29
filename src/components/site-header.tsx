@@ -77,6 +77,9 @@ export async function SiteHeader() {
               <Button asChild variant="ghost" size="sm">
                 <Link href="/dashboard">Dashboard</Link>
               </Button>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/dashboard/settings">Settings</Link>
+              </Button>
               <SignOutButton />
             </>
           ) : user ? (
@@ -88,6 +91,9 @@ export async function SiteHeader() {
               </Button>
               <Button asChild variant="ghost" size="sm">
                 <Link href="/dashboard/new-artist">Create artist profile</Link>
+              </Button>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/dashboard/settings">Settings</Link>
               </Button>
               <SignOutButton />
             </>

@@ -145,6 +145,9 @@ model SongProject {
   band        Band     @relation(fields: [bandId], references: [id], onDelete: Cascade)
   // The user who created the song (for display / audit). Kept from the old
   // schema where it was the owner; the owning org is now `band`.
+  // onDelete: Cascade means deleting this User deletes this song too, even if
+  // the band has other members — guarded against in assertCanDeleteAccount
+  // (src/lib/account-deletion.ts), the only enforcement point for that check.
   ownerId     String
   owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   slug        String

@@ -43,12 +43,23 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => ({}));
   const { kind, contentType, fileName } = body as {
-    kind?: "song" | "logo";
+    kind?: "song" | "logo" | "avatar";
     contentType?: string;
     fileName?: string;
   };
   if (!contentType || !fileName) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+  }
+
+  // User's own avatar: an image gated only on being logged in, no band check.
+  if (kind === "avatar") {
+    if (!ALLOWED_IMAGE.has(contentType)) {
+      return NextResponse.json(
+        { error: "Only PNG, JPEG or WebP images are allowed" },
+        { status: 415 },
+      );
+    }
+    return presignTo(`avatars/${user.id}/${randomUUID()}.${extFor(contentType, fileName)}`, contentType);
   }
 
   // Artist logo: an image gated on band-manage rights, no credit cost.

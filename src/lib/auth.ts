@@ -3,6 +3,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "@/lib/db";
 import { uniqueUserUsername } from "@/lib/username";
 import { sendEmail, actionEmail, isEmailConfigured } from "@/lib/email";
+import { assertCanDeleteAccount } from "@/lib/account-deletion";
 
 const APP_URL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
 
@@ -70,6 +71,27 @@ export const auth = betterAuth({
       username: { type: "string", required: false, input: true },
       displayName: { type: "string", required: false, input: true },
       avatarUrl: { type: "string", required: false, input: true },
+    },
+    changeEmail: {
+      enabled: true,
+      sendChangeEmailConfirmation: async ({ user, newEmail, url }) => {
+        await sendEmail({
+          to: user.email,
+          subject: "Confirm your new Demoify email",
+          html: actionEmail({
+            heading: "Confirm your email change",
+            body: `Click below to confirm changing your Demoify email to ${newEmail}. If you didn't request this, ignore this message.`,
+            url,
+            cta: "Confirm email change",
+          }),
+        });
+      },
+    },
+    deleteUser: {
+      enabled: true,
+      beforeDelete: async (user) => {
+        await assertCanDeleteAccount(user.id);
+      },
     },
   },
   databaseHooks: {

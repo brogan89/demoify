@@ -88,6 +88,11 @@ export function MobileNav({
             <Link href="/dashboard/new-artist">Create artist profile</Link>
           </DropdownMenuItem>
         )}
+        {isAuthed && (
+          <DropdownMenuItem asChild>
+            <Link href="/dashboard/settings">Settings</Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem asChild>
           <a href="https://github.com/brogan89/demoify" target="_blank" rel="noopener noreferrer">
             GitHub

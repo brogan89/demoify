@@ -36,8 +36,9 @@ migrate:
 migrate-remote:
     npx wrangler d1 migrations apply demoify --remote
 
-# Start the dev server (http://localhost:3000).
+# Start the dev server and open it in the browser (http://localhost:3000).
 run:
+    (for i in $(seq 1 50); do curl -s -o /dev/null http://localhost:3000 && open http://localhost:3000 && break; sleep 0.2; done) &
     npm run dev
 
 # Start the dev server against the live production D1 (read-only). Requires
