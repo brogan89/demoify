@@ -45,7 +45,8 @@
 	// are set via `wrangler secret put` / CI, NOT here. No DATABASE_URL — D1 is a binding.
 	"vars": {
 		"BETTER_AUTH_URL": "https://demoify.app",
-		"FEDERATION_HUB_ENABLED": "true"
+		"FEDERATION_HUB_ENABLED": "true",
+		"ADMIN_EMAILS": "brogan.king@outlook.com"
 	},
 
 	// --- Cron triggers for periodic analytics aggregation ---
