@@ -3,10 +3,12 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { SiteHeader } from "@/components/site-header";
+import { FederationBanner } from "@/components/federation-banner";
 import { SiteFooter } from "@/components/site-footer";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PlayerProvider } from "@/components/player/player-provider";
 import { PlayerBar } from "@/components/player/player-bar";
+import { ErrorMonitor } from "@/components/error-monitor";
 import { DevDbPullButton } from "@/components/dev/dev-db-pull-button";
 import { DevViewportToggle } from "@/components/dev/dev-viewport-toggle";
 
@@ -45,9 +47,11 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <ErrorMonitor />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <PlayerProvider>
             <SiteHeader />
+            <FederationBanner />
             <main className="flex-1">{children}</main>
             <SiteFooter />
             <PlayerBar />
