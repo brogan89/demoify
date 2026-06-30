@@ -8,6 +8,35 @@
 > a feature actually works today, see the feature docs it links to — this file
 > is the *history*, not the reference.
 
+## Federation hub is open
+
+The federation infrastructure (schema, migration, API routes, Explore page
+integration, SongCard external variant, admin script) was already built and
+committed, but demoify.app was not configured as a hub — `FEDERATION_HUB_ENABLED`
+was unset, so the hub APIs returned 404 and the Explore page never queried for
+`externalTrack` rows.
+
+Changes to open the hub:
+
+- **`wrangler.jsonc`** — added `FEDERATION_HUB_ENABLED: "true"` to vars. Takes
+  effect on the next deploy. Once deployed, `POST/ DELETE /api/federation/tracks`
+  starts accepting submissions, and the Explore page merges approved external
+  tracks into the feed (with "via <instance>" labels and outbound links).
+- **Announcement banner** — a dismissible `FederationBanner` component appears
+  on every page announcing that federation is open, with links to the docs
+  (`docs/federation.md`) and the GitHub repo for self-hosting. Dismissed state
+  is persisted in localStorage.
+- **First instance registration** — the hub is now provisioned to accept the
+  first self-hosted instance. The operator (or a self-hosted instance) runs:
+  `just federation add "Name" https://their-instance.url --remote`
+  See [`docs/federation.md`](./federation.md) for the full workflow.
+
+Notable decisions:
+- Banner is gated on `federationHubEnabled()` so it only renders on hub
+  instances (never on client-only instances or local dev without the var set).
+- Banner uses plain `<a>` links to GitHub (not internal routes) since the
+  federation docs are markdown files in the repo, not served app pages.
+
 ## Artists search page
 
 Added `/artists` — a dedicated page for searching bands by name/handle, separate

@@ -16,6 +16,19 @@
 		"binding": "IMAGES"
 	},
 
+	// Cloudflare Workers Observability — enables real-time logs, error traces,
+	// and the Logpush integration for long-term log storage.
+	// Docs: https://developers.cloudflare.com/workers/observability/
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1.0,   // Log 100% of requests in Workers Logs
+		// Set to <1.0 for production at scale (e.g. 0.1 = 10%)
+		"tail_sampling_rate": 1.0,    // 100% available via `wrangler tail`
+		"logpush": false              // Toggle to true and configure Logpush job
+		                              // to send logs to R2, S3, Datadog, etc.
+		                              // Setup: wrangler logpush create --dataset workers_trace_events
+	},
+
 	// Cloudflare D1 (SQLite) — the app database. Bound as `env.DB` (see src/lib/db.ts).
 	// Create with: npx wrangler d1 create demoify
 	// then paste the printed database_id below (replaces <D1_DATABASE_ID>).
@@ -31,8 +44,15 @@
 	// Non-secret config. Secrets (BETTER_AUTH_SECRET, STRIPE_*, R2_*, RESEND_API_KEY)
 	// are set via `wrangler secret put` / CI, NOT here. No DATABASE_URL — D1 is a binding.
 	"vars": {
-		"BETTER_AUTH_URL": "https://demoify.app"
+		"BETTER_AUTH_URL": "https://demoify.app",
+		"FEDERATION_HUB_ENABLED": "true"
 	},
+
+	// --- Cron triggers for periodic analytics aggregation ---
+	// Uncomment to enable. Set secrets via wrangler secret put.
+	// "triggers": {
+	//   "crons": ["0 6 * * *"]  // Daily at 06:00 UTC — analytics snapshot + Stripe sync
+	// },
 
 	// --- Custom domain (zone demoify.app active on Cloudflare) -------------
 	"routes": [
