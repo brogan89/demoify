@@ -1,0 +1,24 @@
+- name: Overview
+  href: index.md
+- name: Product & planning
+  items:
+    - name: MVP plan
+      href: mvp-plan.md
+    - name: Changelog & decision log
+      href: changelog.md
+    - name: Marketing plan
+      href: Demoify_Marketing_Plan.pptx
+- name: Features
+  items:
+    - name: Credits & payments
+      href: credits-and-payments.md
+    - name: Tipping
+      href: tipping.md
+    - name: Federation
+      href: federation.md
+- name: Operations
+  items:
+    - name: Admin tooling
+      href: admin.md
+    - name: Analytics & monitoring
+      href: analytics-monitoring.md

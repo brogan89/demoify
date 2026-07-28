@@ -51,3 +51,7 @@ next-env.d.ts
 
 # Prisma generated client
 /src/generated
+
+# docfx build output
+/_site/
+/obj/

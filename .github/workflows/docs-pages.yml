@@ -1,0 +1,60 @@
+name: Deploy docs to GitHub Pages
+
+# Docs live entirely under docs/ (plus the docfx config and nav files at the
+# repo root). This workflow only runs when one of those actually changed —
+# app code changes should never trigger a docs rebuild, and vice versa (see
+# .github/workflows/deploy.yml, which is gated the other way).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "docfx.json"
+      - "toc.yml"
+      - "index.md"
+      - ".github/workflows/docs-pages.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # docfx's git-contribute / last-modified metadata needs real history.
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Install docfx
+        run: dotnet tool install --global docfx
+
+      - name: Build docs site
+        run: docfx docfx.json
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

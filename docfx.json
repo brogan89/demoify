@@ -1,0 +1,33 @@
+{
+  "build": {
+    "content": [
+      {
+        "files": ["index.md", "toc.yml"]
+      },
+      {
+        "files": ["docs/**/*.md", "docs/**/toc.yml"]
+      }
+    ],
+    "resource": [
+      {
+        "files": ["docs/**/*.pptx", "docs/**/*.png", "docs/**/*.jpg", "docs/**/*.svg"]
+      }
+    ],
+    "dest": "_site",
+    "globalMetadata": {
+      "_appName": "Demoify Docs",
+      "_appTitle": "Demoify Docs",
+      "_appFooter": "Demoify — open-source, self-hostable demo sharing for musicians.",
+      "_enableSearch": true,
+      "_gitContribute": {
+        "repo": "https://github.com/brogan89/demoify",
+        "branch": "main"
+      }
+    },
+    "template": ["default", "modern"],
+    "markdownEngineName": "markdig",
+    "postProcessors": ["ExtractSearchIndex"],
+    "xref": [],
+    "disableGitFeatures": false
+  }
+}

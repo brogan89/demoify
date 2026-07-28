@@ -243,7 +243,7 @@ src/app/               App Router pages + API routes (auth, upload, credits, tip
 src/app/admin/         Operator-only pages (coupons, gift credits) — see docs/admin.md
 src/components/        UI (song card/view, header/footer, upload, credits, …)
 src/lib/               Core logic: db, auth, r2, stripe, credits, engagement, federation, genres, admin
-docs/                  Deep-dives: credits-and-payments, admin, tipping, federation, mvp-plan
+docs/                  Knowledge base — deep-dives, runbooks, planning history; published via docfx
 DEPLOYMENT.md          Cloudflare/D1/R2/Stripe/CI setup walkthrough
 ```
 
@@ -276,12 +276,18 @@ lived in a local `.env`:
 
 ## Learn more
 
+All project documentation lives under [`docs/`](docs/) and is published as a
+browsable site via [docfx](https://dotnet.github.io/docfx/) + GitHub Pages
+(see `docs-pages.yml`) — start at the [docs index](docs/index.md).
+
 - [`DEPLOYMENT.md`](DEPLOYMENT.md) — production setup on Cloudflare.
 - [`docs/credits-and-payments.md`](docs/credits-and-payments.md) — credit economy, Stripe Checkout, and coupons.
 - [`docs/admin.md`](docs/admin.md) — operator tooling: coupon administration and gifting credits.
 - [`docs/tipping.md`](docs/tipping.md) — artist payouts via Stripe Connect.
 - [`docs/federation.md`](docs/federation.md) — the federated Explore protocol.
+- [`docs/analytics-monitoring.md`](docs/analytics-monitoring.md) — analytics and monitoring infrastructure.
 - [`docs/changelog.md`](docs/changelog.md) — chronological log of feature plans and decisions, for project history.
+- [`docs/Demoify_Marketing_Plan.pptx`](docs/Demoify_Marketing_Plan.pptx) — pre-launch marketing plan.
 - [Next.js](https://nextjs.org/docs) · [Prisma](https://www.prisma.io/docs) · [Better Auth](https://www.better-auth.com/docs) · [OpenNext for Cloudflare](https://opennext.js.org/cloudflare)
 
 ## Feedback
