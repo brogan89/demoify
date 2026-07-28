@@ -22,6 +22,8 @@ export type SongCardData = {
     id: string;
     audioUrl: string;
     duration: number | null;
+    // Stored waveform peaks, parsed server-side (null for legacy versions).
+    peaks: number[] | null;
     versionNumber: number;
     uploadedAt: string;
   };

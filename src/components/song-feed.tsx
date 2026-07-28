@@ -25,6 +25,7 @@ function toTrack(card: SongCardData): Track {
     versionId: v.id,
     audioUrl: v.audioUrl,
     duration: v.duration,
+    peaks: v.peaks,
     title: card.title,
     slug: card.slug,
     band: card.band,

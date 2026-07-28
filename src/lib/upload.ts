@@ -1,5 +1,7 @@
 "use client";
 
+import { decodeToPeaks } from "@/lib/waveform";
+
 export const ACCEPTED_AUDIO = ["audio/mpeg", "audio/wav", "audio/x-wav", "audio/wave"];
 export const ACCEPT_ATTR = ".mp3,.wav,audio/mpeg,audio/wav";
 export const MAX_BYTES = 100 * 1024 * 1024; // 100 MB
@@ -17,6 +19,23 @@ export function isAcceptedAudio(file: File): boolean {
 export function isAcceptedImage(file: File): boolean {
   if (ACCEPTED_IMAGE.includes(file.type)) return true;
   return /\.(png|jpe?g|webp)$/i.test(file.name);
+}
+
+/**
+ * Decode `file` client-side into waveform peaks + exact duration, for storing
+ * on the version at upload (issue #6 — mobile can't decode, so peaks must be
+ * computed once here and served). Best-effort: null when this browser can't
+ * decode the file; callers then fall back to {@link readDuration} and the
+ * version is stored without peaks.
+ */
+export async function readWaveform(
+  file: File,
+): Promise<{ peaks: number[]; duration: number } | null> {
+  try {
+    return await decodeToPeaks(await file.arrayBuffer());
+  } catch {
+    return null;
+  }
 }
 
 /** Read audio duration (seconds) client-side via an <audio> element. */

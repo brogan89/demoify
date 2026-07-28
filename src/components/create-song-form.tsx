@@ -17,6 +17,7 @@ import {
   MAX_BYTES,
   isAcceptedAudio,
   readDuration,
+  readWaveform,
   putToPresigned,
 } from "@/lib/upload";
 import { createProject } from "@/app/actions/projects";
@@ -76,7 +77,10 @@ export function CreateSongForm({
         try {
           const contentType =
             file.type || (/\.wav$/i.test(file.name) ? "audio/wav" : "audio/mpeg");
-          const duration = await readDuration(file);
+          // Decode once here for the stored waveform (and exact duration) so
+          // every listener — mobile included — renders it without the audio.
+          const wave = await readWaveform(file);
+          const duration = wave?.duration ?? (await readDuration(file));
 
           const presignRes = await fetch("/api/upload/presign", {
             method: "POST",
@@ -97,6 +101,7 @@ export function CreateSongForm({
             projectId,
             audioUrl: publicUrl,
             duration,
+            peaks: wave?.peaks ?? null,
           });
           if ("error" in versionRes && versionRes.error) throw new Error(versionRes.error);
 

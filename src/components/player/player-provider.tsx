@@ -23,6 +23,9 @@ export type Track = {
   versionId: string;
   audioUrl: string;
   duration: number | null;
+  // Precomputed waveform peaks served with the song (null on legacy versions,
+  // which decode client-side instead — see the Waveform component).
+  peaks: number[] | null;
   title: string;
   slug: string;
   band: { username: string; displayName: string };

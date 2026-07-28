@@ -20,6 +20,8 @@ export function fmtTime(seconds: number): string {
  */
 export function PlayerControls({
   src,
+  peaks,
+  versionId,
   playing,
   currentTime,
   duration,
@@ -28,6 +30,9 @@ export function PlayerControls({
   className,
 }: {
   src: string;
+  // Stored waveform peaks + the version they belong to (for legacy backfill).
+  peaks?: number[] | null;
+  versionId?: string;
   playing: boolean;
   currentTime: number;
   duration: number;
@@ -53,6 +58,8 @@ export function PlayerControls({
         <Waveform
           key={src}
           src={src}
+          peaks={peaks}
+          versionId={versionId}
           currentTime={currentTime}
           duration={duration}
           onSeek={onSeek}

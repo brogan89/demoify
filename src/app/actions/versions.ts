@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
-import { getMembership, canManageSongs } from "@/lib/band";
+import { getMembership, canManageSongs, isMember } from "@/lib/band";
 import { UPLOAD_COST, creditsEnabled } from "@/lib/credits";
 import { syncTrack } from "@/lib/federation";
+import { sanitizePeaks, serializePeaks } from "@/lib/waveform";
 
 const INSUFFICIENT_CREDITS = "INSUFFICIENT_CREDITS";
 
@@ -14,6 +15,9 @@ type CreateVersionInput = {
   audioUrl: string;
   changelog?: string | null;
   duration?: number | null;
+  // Waveform peaks computed in the uploader's browser (see src/lib/waveform.ts).
+  // Optional/best-effort: null when the uploader's browser couldn't decode.
+  peaks?: number[] | null;
 };
 
 export async function createVersion(input: CreateVersionInput) {
@@ -61,12 +65,17 @@ export async function createVersion(input: CreateVersionInput) {
       });
       const versionNumber = (last?.versionNumber ?? 0) + 1;
 
+      // Re-validate the client-computed peaks — this is an open action, so only
+      // a plausible normalized array is ever stored (anything else becomes null).
+      const peaks = sanitizePeaks(input.peaks);
+
       const versionData = {
         projectId: project.id,
         versionNumber,
         audioUrl: input.audioUrl,
         changelog: input.changelog?.trim() || null,
         duration: input.duration ?? null,
+        peaks: peaks ? serializePeaks(peaks) : null,
       };
 
       try {
@@ -104,4 +113,46 @@ export async function createVersion(input: CreateVersionInput) {
     }
     throw err;
   }
+}
+
+/**
+ * Backfill waveform peaks for a version uploaded before peaks were stored
+ * (issue #6). Called fire-and-forget by the Waveform component after it
+ * successfully decodes such a version in the browser, so old songs start
+ * rendering on mobile once any band member views them on a capable device.
+ *
+ * Deliberately narrow: only band members may write, only while `peaks` is
+ * still null (write-once — the conditional update also makes races harmless),
+ * and the payload must pass the same sanitizer as uploads.
+ */
+export async function saveWaveform(input: { versionId: string; peaks: number[] }) {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const peaks = sanitizePeaks(input.peaks);
+  if (!peaks) return { error: "Invalid peaks" };
+
+  const version = await prisma.songVersion.findUnique({
+    where: { id: input.versionId },
+    select: {
+      peaks: true,
+      project: {
+        select: { id: true, bandId: true, slug: true, band: { select: { username: true } } },
+      },
+    },
+  });
+  if (!version) return { error: "Version not found" };
+  if (version.peaks) return { ok: true }; // already stored
+
+  const role = await getMembership(version.project.bandId, user.id);
+  if (!isMember(role)) return { error: "Not allowed" };
+
+  await prisma.songVersion.updateMany({
+    where: { id: input.versionId, peaks: null },
+    data: { peaks: serializePeaks(peaks) },
+  });
+
+  revalidatePath(`/dashboard/${version.project.id}`);
+  revalidatePath(`/${version.project.band.username}/${version.project.slug}`);
+  return { ok: true };
 }

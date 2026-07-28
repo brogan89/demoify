@@ -11,6 +11,7 @@ import { SongFeed } from "@/components/song-feed";
 import { type SongCardData } from "@/components/song-card";
 import { SocialLinks } from "@/components/social-links";
 import { parseSocialLinks } from "@/lib/socials";
+import { parsePeaksJson } from "@/lib/waveform";
 import { TipButton } from "@/components/tip-button";
 import { TipResultToast } from "@/components/tip-result-toast";
 
@@ -64,7 +65,7 @@ export default async function ArtistProfilePage({
       versions: {
         orderBy: { versionNumber: "desc" },
         take: 1,
-        select: { id: true, audioUrl: true, duration: true, versionNumber: true, uploadedAt: true },
+        select: { id: true, audioUrl: true, duration: true, peaks: true, versionNumber: true, uploadedAt: true },
       },
     },
   });
@@ -79,7 +80,11 @@ export default async function ArtistProfilePage({
     liked: s.likes.length > 0,
     isPrivate: s.visibility === "PRIVATE",
     band: { username: band.username, displayName: band.displayName },
-    version: { ...s.versions[0], uploadedAt: s.versions[0].uploadedAt.toISOString() },
+    version: {
+      ...s.versions[0],
+      peaks: parsePeaksJson(s.versions[0].peaks),
+      uploadedAt: s.versions[0].uploadedAt.toISOString(),
+    },
   }));
 
   return (

@@ -13,6 +13,8 @@ export type VersionDTO = {
   audioUrl: string;
   changelog: string | null;
   duration: number | null;
+  // Stored waveform peaks, parsed server-side (null for legacy versions).
+  peaks: number[] | null;
   uploadedAt: string;
 };
 
@@ -69,6 +71,7 @@ export function SongView({
       versionId: v.id,
       audioUrl: v.audioUrl,
       duration: v.duration,
+      peaks: v.peaks,
       title,
       slug,
       band,

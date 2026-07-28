@@ -38,6 +38,8 @@ export function PlayerBar() {
           </div>
           <PlayerControls
             src={current.audioUrl}
+            peaks={current.peaks}
+            versionId={current.versionId}
             playing={playing}
             currentTime={currentTime}
             duration={duration || (current.duration ?? 0)}

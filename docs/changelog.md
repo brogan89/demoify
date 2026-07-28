@@ -8,6 +8,48 @@
 > a feature actually works today, see the feature docs it links to — this file
 > is the *history*, not the reference.
 
+## Server-stored waveforms (issue #6)
+
+Issue #6: waveforms didn't render on mobile. Investigation found **two**
+root causes, and the fix addresses both:
+
+1. **Layout, the actual invisibility**: the waveform drew 160 bars with 1px
+   flex gaps. On a phone the player's waveform slot is ~160px wide, so the
+   159px of gaps alone consumed the container and every bar rounded to 0px
+   width — invisible even when audio decoded fine. `WaveformBars` now measures
+   its container (ResizeObserver) and downsamples the peaks (max-per-bucket) to
+   what physically fits at ≥2px per bar. The width starts at 0 on the server
+   and first client render, so SSR/hydration markup stays identical.
+2. **Client-side decode, the waste + fragility**: every listener downloaded the
+   *entire* audio file and ran `decodeAudioData` just to draw the bars (a
+   ~5-minute track decodes to hundreds of MB of PCM — exactly what low-memory
+   mobile browsers abort). Peaks are now computed **once in the uploader's
+   browser** (`readWaveform` in `src/lib/upload.ts`), stored on
+   `SongVersion.peaks` as ~1 KB of JSON (migration `0014_song_version_peaks`),
+   and served with song data — a feed page now makes **zero** audio requests
+   where it previously fetched every song's full MP3.
+
+Notable decisions:
+
+- **D1 column, not an R2 sidecar file.** 1 KB rides along in the existing song
+  queries with no extra request and no CORS exposure — CORS/fetch being part of
+  what's flaky on mobile in the first place.
+- **Computed client-side at upload, not on the server.** Uploads go browser →
+  R2 via presigned PUT, so the Worker never holds the bytes — and workerd has
+  no audio decoder anyway (a WASM MP3 decoder + CPU limits isn't worth it).
+  The uploader's browser already has the file in hand.
+- **Legacy versions self-heal.** Versions without stored peaks keep the old
+  fetch+decode path, and on success the client reports the peaks back via the
+  `saveWaveform` action — accepted only from members of the owning band, only
+  while the column is still null (write-once), and only after re-running the
+  same `sanitizePeaks` validation as uploads (peaks are client-computed, so
+  the server treats them as untrusted on both write paths). One member desktop
+  visit to Explore backfilled an entire local catalog in testing.
+- `sanitizePeaks` accepts a length *range* (16–512) rather than exactly 160,
+  so stored rows keep rendering if the bar count ever changes.
+- Shared helpers live in `src/lib/waveform.ts` (no directive — imported by
+  client components and server actions alike).
+
 ## Federation hub is open
 
 The federation infrastructure (schema, migration, API routes, Explore page

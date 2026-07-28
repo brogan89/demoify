@@ -9,6 +9,7 @@ import { type SongCardData } from "@/components/song-card";
 import { SongFeed } from "@/components/song-feed";
 import { ExploreFilters } from "@/components/explore-filters";
 import { normalizeGenre } from "@/lib/genres";
+import { parsePeaksJson } from "@/lib/waveform";
 import { federationHubEnabled } from "@/lib/federation";
 import { cn } from "@/lib/utils";
 
@@ -79,7 +80,7 @@ export default async function ExplorePage({
       versions: {
         orderBy: { versionNumber: "desc" },
         take: 1,
-        select: { id: true, audioUrl: true, duration: true, versionNumber: true, uploadedAt: true },
+        select: { id: true, audioUrl: true, duration: true, peaks: true, versionNumber: true, uploadedAt: true },
       },
     },
   });
@@ -99,7 +100,11 @@ export default async function ExplorePage({
       liked: s.likes.length > 0,
       isPrivate: s.visibility === "PRIVATE",
       band: s.band,
-      version: { ...s.versions[0], uploadedAt: s.versions[0].uploadedAt.toISOString() },
+      version: {
+        ...s.versions[0],
+        peaks: parsePeaksJson(s.versions[0].peaks),
+        uploadedAt: s.versions[0].uploadedAt.toISOString(),
+      },
     },
     recentAt: s.createdAt.getTime(),
     likes: s._count.likes,

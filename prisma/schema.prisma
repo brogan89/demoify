@@ -350,6 +350,11 @@ model SongVersion {
   audioUrl      String
   changelog     String?
   duration      Float?
+  // Precomputed waveform peaks: JSON array of ~160 normalized floats (0..1),
+  // computed in the uploader's browser and rendered on every device without
+  // fetching/decoding the audio (mobile can't decode it — issue #6). Null for
+  // legacy versions, which fall back to client-side decode + backfill.
+  peaks         String?
   uploadedAt    DateTime    @default(now())
 
   comments Comment[]

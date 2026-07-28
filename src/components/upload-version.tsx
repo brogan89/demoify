@@ -14,6 +14,7 @@ import {
   MAX_BYTES,
   isAcceptedAudio,
   readDuration,
+  readWaveform,
   putToPresigned,
 } from "@/lib/upload";
 import { createVersion } from "@/app/actions/versions";
@@ -58,7 +59,10 @@ export function UploadVersion({
     setProgress(0);
     try {
       const contentType = file.type || (/\.wav$/i.test(file.name) ? "audio/wav" : "audio/mpeg");
-      const duration = await readDuration(file);
+      // Decode once here for the stored waveform (and exact duration) so every
+      // listener — mobile included — renders it without downloading the audio.
+      const wave = await readWaveform(file);
+      const duration = wave?.duration ?? (await readDuration(file));
 
       const presignRes = await fetch("/api/upload/presign", {
         method: "POST",
@@ -78,6 +82,7 @@ export function UploadVersion({
         audioUrl: publicUrl,
         changelog,
         duration,
+        peaks: wave?.peaks ?? null,
       });
       if ("error" in result && result.error) throw new Error(result.error);
 

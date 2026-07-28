@@ -25,6 +25,8 @@ export function TrackPlayer({
   ) : (
     <PlayerControls
       src={track.audioUrl}
+      peaks={track.peaks}
+      versionId={track.versionId}
       playing={false}
       currentTime={0}
       duration={track.duration ?? 0}
@@ -41,6 +43,8 @@ function ActiveTrackPlayer({ track }: { track: Track }) {
   return (
     <PlayerControls
       src={track.audioUrl}
+      peaks={track.peaks}
+      versionId={track.versionId}
       playing={playing}
       currentTime={currentTime}
       duration={duration || (track.duration ?? 0)}

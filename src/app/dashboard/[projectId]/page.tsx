@@ -8,6 +8,7 @@ import { isR2Configured } from "@/lib/r2";
 import { creditsEnabled } from "@/lib/credits";
 import { SongView, type VersionDTO } from "@/components/song-view";
 import { type CommentDTO } from "@/components/comments";
+import { parsePeaksJson } from "@/lib/waveform";
 import { UploadVersion } from "@/components/upload-version";
 import { DeleteSongButton } from "@/components/delete-song-button";
 import { VisibilityToggle } from "@/components/visibility-toggle";
@@ -49,6 +50,7 @@ export default async function ProjectPage({
     audioUrl: v.audioUrl,
     changelog: v.changelog,
     duration: v.duration,
+    peaks: parsePeaksJson(v.peaks),
     uploadedAt: v.uploadedAt.toISOString(),
   }));
 
