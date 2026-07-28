@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Disc3, Lock } from "lucide-react";
+import { Disc3, Lock, Pencil } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { getMembership, isMember, canManageSongs } from "@/lib/band";
 import { SongView, type VersionDTO } from "@/components/song-view";
 import { type CommentDTO } from "@/components/comments";
+import { Button } from "@/components/ui/button";
 import { ShareLink } from "@/components/share-link";
 import { LikeButton } from "@/components/like-button";
 import { TipButton } from "@/components/tip-button";
@@ -158,6 +159,13 @@ export default async function PublicSongPage({
             isAuthed={Boolean(currentUser)}
             canTip={project.band.payoutsEnabled && !isMember(role)}
           />
+        )}
+        {isMember(role) && (
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/dashboard/${project.id}`}>
+              <Pencil className="size-3.5" /> Edit song
+            </Link>
+          </Button>
         )}
       </div>
 

@@ -55,3 +55,5 @@ next-env.d.ts
 # docfx build output
 /_site/
 /obj/
+
+.next-broken-cache-backup/
