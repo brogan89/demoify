@@ -14,6 +14,7 @@ import { parseSocialLinks } from "@/lib/socials";
 import { parsePeaksJson } from "@/lib/waveform";
 import { TipButton } from "@/components/tip-button";
 import { TipResultToast } from "@/components/tip-result-toast";
+import { sleeveGradient } from "@/components/art-tile";
 
 function initials(name: string): string {
   return name.slice(0, 2).toUpperCase();
@@ -93,12 +94,19 @@ export default async function ArtistProfilePage({
       <header className="mb-8 flex items-start gap-4">
         <Avatar className="size-16">
           {band.avatarUrl && <AvatarImage src={band.avatarUrl} alt="" />}
-          <AvatarFallback className="text-lg">{initials(band.displayName)}</AvatarFallback>
+          <AvatarFallback
+            className="text-lg font-medium text-white"
+            style={sleeveGradient(band.username)}
+          >
+            {initials(band.displayName)}
+          </AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h1 className="truncate text-2xl font-semibold">{band.displayName}</h1>
+              <h1 className="truncate font-heading text-3xl font-bold tracking-tight">
+                {band.displayName}
+              </h1>
               <p className="truncate font-mono text-xs text-muted-foreground">demoify.app/{band.username}</p>
             </div>
             <div className="flex shrink-0 items-center gap-2">

@@ -101,9 +101,13 @@ export function SongView({
     <div className="space-y-6">
       <div className="space-y-2">
         <div className="flex items-baseline justify-between gap-2">
-          <h2 className="text-sm font-medium text-muted-foreground">
+          <h2 className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             v{selected.versionNumber}
-            {selected.versionNumber === versions[0].versionNumber && " (latest)"}
+            {selected.versionNumber === versions[0].versionNumber && (
+              <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 font-mono text-[10px] text-primary">
+                latest
+              </span>
+            )}
           </h2>
           <span
             className="flex items-center gap-1 text-xs text-muted-foreground"
@@ -132,7 +136,7 @@ export function SongView({
                 <span
                   className={cn(
                     "absolute -left-[1.4rem] top-1.5 size-2.5 rounded-full ring-4 ring-background",
-                    isSelected ? "bg-primary" : "bg-muted-foreground/40",
+                    isSelected ? "bg-brand-gradient" : "bg-muted-foreground/40",
                   )}
                 />
                 <button
@@ -140,7 +144,7 @@ export function SongView({
                   onClick={() => setSelectedId(v.id)}
                   className={cn(
                     "w-full rounded-md border px-3 py-2 text-left transition-colors",
-                    isSelected ? "border-primary bg-accent" : "hover:bg-accent/50",
+                    isSelected ? "border-primary/40 bg-accent" : "hover:bg-accent/50",
                   )}
                 >
                   <div className="flex items-center justify-between gap-2">

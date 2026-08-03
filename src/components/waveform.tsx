@@ -184,18 +184,32 @@ export function WaveformBars({
           : undefined
       }
     >
-      {bars.map((p, i) => (
-        <span
-          key={i}
-          className={`min-h-[2px] flex-1 rounded-full ${
-            i < played ? "bg-primary" : "bg-muted-foreground/40"
-          }`}
-          // Round to 2 decimals so tiny Math.sin/cos differences between the
-          // server and browser don't produce mismatched height strings (which
-          // would trip React hydration on the home hero waveform).
-          style={{ height: `${Math.max(6, p * 100).toFixed(2)}%` }}
-        />
-      ))}
+      {bars.map((p, i) => {
+        const isPlayed = i < played;
+        // Position along the bar run, as an integer percent so the emitted
+        // style string is identical on server and client (hydration-safe).
+        const pct = Math.round((i / bars.length) * 100);
+        return (
+          <span
+            key={i}
+            className={`min-h-[2px] flex-1 rounded-full ${
+              isPlayed ? "" : "bg-muted-foreground/30"
+            }`}
+            // Height rounds to 2 decimals so tiny Math.sin/cos differences
+            // between the server and browser don't produce mismatched height
+            // strings (which would trip React hydration on the home hero).
+            // Played bars sweep the brand gradient left → right.
+            style={{
+              height: `${Math.max(6, p * 100).toFixed(2)}%`,
+              ...(isPlayed
+                ? {
+                    background: `color-mix(in oklch, var(--brand-from), var(--brand-to) ${pct}%)`,
+                  }
+                : {}),
+            }}
+          />
+        );
+      })}
     </div>
   );
 }

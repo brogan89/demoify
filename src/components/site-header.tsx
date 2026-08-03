@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Coins, Disc3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { NavLink } from "@/components/nav-link";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AccountMenu } from "@/components/account-menu";
 import { BandSwitcher } from "@/components/band-switcher";
@@ -16,18 +17,18 @@ export async function SiteHeader() {
     : [[], null];
 
   return (
-    <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
+    <header className="sticky top-0 z-10 border-b bg-background/70 backdrop-blur-lg">
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2 text-lg font-semibold">
-          <Disc3 className="size-6 text-primary" suppressHydrationWarning />
-          Demoify
+        <Link href="/" className="flex items-center gap-2.5 text-lg font-semibold">
+          <span className="flex size-8 items-center justify-center rounded-lg bg-brand-gradient shadow-glow-sm">
+            <Disc3 className="size-5 text-white" suppressHydrationWarning />
+          </span>
+          <span className="font-heading font-bold tracking-tight">Demoify</span>
         </Link>
         {/* Below md the inline nav doesn't fit at the larger sizing — collapse to a menu.
             Explore stays inline (primary nav); theme toggle lives in the menu only. */}
         <div className="flex items-center gap-2 md:hidden">
-          <Button asChild variant="ghost" size="lg" className="text-base">
-            <Link href="/explore">Explore</Link>
-          </Button>
+          <NavLink href="/explore">Explore</NavLink>
           <MobileNav
             isAuthed={Boolean(user)}
             hasBand={Boolean(active)}
@@ -47,17 +48,11 @@ export async function SiteHeader() {
           >
             <GithubIcon className="size-5" />
           </a>
-          <Button asChild variant="ghost" size="lg" className="text-base">
-            <Link href="/explore">Explore</Link>
-          </Button>
-          <Button asChild variant="ghost" size="lg" className="text-base">
-            <Link href="/artists">Artists</Link>
-          </Button>
+          <NavLink href="/explore">Explore</NavLink>
+          <NavLink href="/artists">Artists</NavLink>
           {user && active ? (
             <>
-              <Button asChild variant="ghost" size="lg" className="text-base">
-                <Link href="/library">Library</Link>
-              </Button>
+              <NavLink href="/library">Library</NavLink>
               <BandSwitcher
                 bands={bands.map((b) => ({
                   id: b.band.id,
@@ -86,9 +81,7 @@ export async function SiteHeader() {
             // Signed in but no artist profile yet — a listener. Give them the
             // full listening nav, with creating a profile as a low-key option.
             <>
-              <Button asChild variant="ghost" size="lg" className="text-base">
-                <Link href="/library">Library</Link>
-              </Button>
+              <NavLink href="/library">Library</NavLink>
               <Button asChild variant="outline" size="lg" className="text-base">
                 <Link href="/dashboard/new-artist">Create artist profile</Link>
               </Button>
@@ -106,7 +99,11 @@ export async function SiteHeader() {
               <Button asChild variant="ghost" size="lg" className="text-base">
                 <Link href="/login">Log in</Link>
               </Button>
-              <Button asChild size="lg" className="text-base">
+              <Button
+                asChild
+                size="lg"
+                className="bg-brand-gradient text-base text-white hover:opacity-90"
+              >
                 <Link href="/signup">Sign up</Link>
               </Button>
             </>

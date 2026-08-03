@@ -48,8 +48,13 @@ export function PlayerControls({
         variant="default"
         onClick={onToggle}
         aria-label={playing ? "Pause" : "Play"}
+        className="shrink-0 rounded-full bg-brand-gradient text-white hover:opacity-90"
       >
-        {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
+        {playing ? (
+          <Pause className="size-4 fill-current" />
+        ) : (
+          <Play className="size-4 fill-current" />
+        )}
       </Button>
       <span className="w-12 text-right text-xs tabular-nums text-muted-foreground">
         {fmtTime(currentTime)}

@@ -4,6 +4,7 @@ import { Search } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { sleeveGradient } from "@/components/art-tile";
 
 export const metadata: Metadata = {
   title: "Artists · Demoify",
@@ -36,7 +37,7 @@ export default async function ArtistsPage({
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Artists</h1>
+        <h1 className="font-heading text-3xl font-bold tracking-tight">Artists</h1>
         <p className="text-sm text-muted-foreground">Find bands and artists on Demoify.</p>
       </div>
 
@@ -66,7 +67,12 @@ export default async function ArtistsPage({
               >
                 <Avatar className="size-12">
                   {band.avatarUrl && <AvatarImage src={band.avatarUrl} alt="" />}
-                  <AvatarFallback>{initials(band.displayName)}</AvatarFallback>
+                  <AvatarFallback
+                    className="font-medium text-white"
+                    style={sleeveGradient(band.username)}
+                  >
+                    {initials(band.displayName)}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{band.displayName}</p>

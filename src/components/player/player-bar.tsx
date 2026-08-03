@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlayerControls } from "@/components/player/player-controls";
 import { usePlayer, usePlayerTime } from "@/components/player/player-provider";
+import { ArtTile, Equalizer } from "@/components/art-tile";
 
 /**
  * The persistent bottom player. Mounted once in the root layout so playback — and
@@ -18,8 +19,18 @@ export function PlayerBar() {
   if (!current) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <div className="fixed inset-x-0 bottom-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-brand-gradient">
       <div className="mx-auto flex max-w-5xl items-center gap-4 px-4 py-3">
+        <Link
+          href={`/${current.band.username}/${current.slug}`}
+          aria-hidden
+          tabIndex={-1}
+          className="hidden sm:block"
+        >
+          <ArtTile seed={current.projectId} size="sm">
+            <Equalizer playing={playing} className="h-3.5 text-white" />
+          </ArtTile>
+        </Link>
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex items-baseline gap-2 text-sm">
             <Link

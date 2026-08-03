@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Globe, Heart, Lock, MessageCircle, Music4, Play } from "lucide-react";
+import { Globe, Heart, Lock, MessageCircle, Play } from "lucide-react";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LikeButton } from "@/components/like-button";
+import { ArtTile } from "@/components/art-tile";
 
 export type SongCardData = {
   id: string;
@@ -107,12 +108,17 @@ export function SongCard({ song, isAuthed }: { song: SongCardData; isAuthed: boo
   // new tab; local cards use Next's client-side Link.
   const TitleLink = ext
     ? (
-        <a href={trackHref} target="_blank" rel="noopener noreferrer" className="truncate hover:underline">
+        <a
+          href={trackHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="truncate transition-colors hover:text-primary"
+        >
           {song.title}
         </a>
       )
     : (
-        <Link href={trackHref} className="truncate hover:underline">
+        <Link href={trackHref} className="truncate transition-colors hover:text-primary">
           {song.title}
         </Link>
       );
@@ -135,21 +141,25 @@ export function SongCard({ song, isAuthed }: { song: SongCardData; isAuthed: boo
       );
 
   return (
-    <Card className="flex h-full flex-col">
+    <Card className="flex h-full flex-col transition-shadow duration-300 hover:ring-foreground/20">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Music4 className="size-4 shrink-0 text-primary" />
-          {TitleLink}
-        </CardTitle>
-        {ext && (
-          <span
-            className="flex items-center gap-1 text-xs text-muted-foreground"
-            title={`Shared from ${ext.originName}`}
-          >
-            <Globe className="size-3" />
-            via {ext.originName}
-          </span>
-        )}
+        <div className="flex min-w-0 items-center gap-3">
+          <ArtTile seed={song.id} size="md" />
+          <div className="min-w-0 flex-1">
+            <CardTitle className="flex items-center gap-2 text-base">
+              {TitleLink}
+            </CardTitle>
+            {ext && (
+              <span
+                className="flex items-center gap-1 text-xs text-muted-foreground"
+                title={`Shared from ${ext.originName}`}
+              >
+                <Globe className="size-3" />
+                via {ext.originName}
+              </span>
+            )}
+          </div>
+        </div>
         <CardAction>
           <SongStats
             playCount={song.playCount}

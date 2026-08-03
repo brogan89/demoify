@@ -32,7 +32,7 @@ export function TrackPlayer({
       duration={track.duration ?? 0}
       onToggle={() => onStart()}
       onSeek={(s) => onStart(s)}
-      className="rounded-lg border bg-card p-3"
+      className="rounded-lg border bg-card/50 p-3 transition-colors"
     />
   );
 }
@@ -50,7 +50,7 @@ function ActiveTrackPlayer({ track }: { track: Track }) {
       duration={duration || (track.duration ?? 0)}
       onToggle={toggle}
       onSeek={seek}
-      className="rounded-lg border border-primary/50 bg-card p-3"
+      className="rounded-lg border border-primary/40 bg-card p-3 shadow-glow-sm"
     />
   );
 }

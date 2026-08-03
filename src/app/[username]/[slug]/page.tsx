@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Disc3, Lock, Pencil } from "lucide-react";
+import { Lock, Pencil } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { getMembership, isMember, canManageSongs } from "@/lib/band";
@@ -13,6 +13,7 @@ import { ShareLink } from "@/components/share-link";
 import { LikeButton } from "@/components/like-button";
 import { TipButton } from "@/components/tip-button";
 import { TipResultToast } from "@/components/tip-result-toast";
+import { ArtTile } from "@/components/art-tile";
 
 async function getProject(username: string, slug: string) {
   return prisma.songProject.findFirst({
@@ -108,10 +109,10 @@ export default async function PublicSongPage({
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
-      <div className="mb-6 flex items-start gap-3">
-        <Disc3 className="mt-1 size-7 shrink-0 text-primary" />
+      <div className="mb-6 flex items-start gap-4">
+        <ArtTile seed={project.id} size="lg" />
         <div className="min-w-0">
-          <h1 className="flex items-center gap-2 text-2xl font-semibold break-words">
+          <h1 className="flex items-center gap-2 font-heading text-3xl font-bold tracking-tight break-words md:text-4xl">
             {project.title}
             {isPrivate && (
               <Lock className="size-4 shrink-0 text-muted-foreground" aria-label="Private" />
@@ -121,7 +122,7 @@ export default async function PublicSongPage({
             by{" "}
             <Link
               href={`/${project.band.username}`}
-              className="hover:text-foreground hover:underline"
+              className="transition-colors hover:text-foreground hover:underline"
             >
               {project.band.displayName}
             </Link>
@@ -132,10 +133,25 @@ export default async function PublicSongPage({
             </p>
           )}
           {project.genre && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              {project.genre}
-              {project.subgenre ? ` · ${project.subgenre}` : ""}
-            </p>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              <Link
+                href={`/explore?${new URLSearchParams({ genre: project.genre })}`}
+                className="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs text-primary transition-colors hover:bg-primary/20"
+              >
+                {project.genre}
+              </Link>
+              {project.subgenre && (
+                <Link
+                  href={`/explore?${new URLSearchParams({
+                    genre: project.genre,
+                    subgenre: project.subgenre,
+                  })}`}
+                  className="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs text-primary transition-colors hover:bg-primary/20"
+                >
+                  {project.subgenre}
+                </Link>
+              )}
+            </div>
           )}
         </div>
       </div>

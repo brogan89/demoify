@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { SiteHeader } from "@/components/site-header";
@@ -29,6 +29,20 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Display face for headings only (wired to `font-heading` in globals.css).
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin"],
+});
+
+// Tint the mobile browser chrome to match the theme backgrounds.
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#131119" },
+    { media: "(prefers-color-scheme: light)", color: "#fbfafc" },
+  ],
+};
+
 export const metadata: Metadata = {
   title: "Demoify — Share music, get feedback",
   description:
@@ -44,11 +58,11 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <ErrorMonitor />
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <PlayerProvider>
             <SiteHeader />
             <FederationBanner />
