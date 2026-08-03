@@ -43,7 +43,7 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => ({}));
   const { kind, contentType, fileName } = body as {
-    kind?: "song" | "logo" | "avatar";
+    kind?: "song" | "logo" | "avatar" | "artwork";
     contentType?: string;
     fileName?: string;
   };
@@ -77,6 +77,34 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Not allowed" }, { status: 403 });
     }
     return presignTo(`logos/${bandId}/${randomUUID()}.${extFor(contentType, fileName)}`, contentType);
+  }
+
+  // Song cover art: an image gated on band-manage rights, no credit cost. Keyed
+  // under songs/<projectId>/ so deleteProject's prefix purge cleans it up too.
+  if (kind === "artwork") {
+    const projectId = body.projectId as string | undefined;
+    if (!projectId) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    if (!ALLOWED_IMAGE.has(contentType)) {
+      return NextResponse.json(
+        { error: "Only PNG, JPEG or WebP images are allowed" },
+        { status: 415 },
+      );
+    }
+    const project = await prisma.songProject.findUnique({
+      where: { id: projectId },
+      select: { bandId: true },
+    });
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+    const role = await getMembership(project.bandId, user.id);
+    if (!canManageSongs(role)) {
+      return NextResponse.json({ error: "Not allowed" }, { status: 403 });
+    }
+    return presignTo(
+      `songs/${projectId}/artwork/${randomUUID()}.${extFor(contentType, fileName)}`,
+      contentType,
+    );
   }
 
   // Default: a song version (audio), charged against the band's credits.

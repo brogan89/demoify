@@ -15,6 +15,9 @@ export type SongCardData = {
   // True for a band's private songs — only ever sent to that band's members (see the
   // feed queries), surfaced with a Private badge so they're distinguishable.
   isPrivate: boolean;
+  // Resolved sleeve image (song artwork ?? band logo), computed server-side.
+  // Null falls back to the generated gradient. Always null for federated cards.
+  artUrl: string | null;
   band: { username: string; displayName: string };
   // Latest playable version, for inline playback in the Explore feed. Absent on
   // federated cards (which link out to their origin instead) — see SongFeed.
@@ -144,7 +147,7 @@ export function SongCard({ song, isAuthed }: { song: SongCardData; isAuthed: boo
     <Card className="flex h-full flex-col transition-shadow duration-300 hover:ring-foreground/20">
       <CardHeader>
         <div className="flex min-w-0 items-center gap-3">
-          <ArtTile seed={song.id} size="md" />
+          <ArtTile seed={song.id} size="md" src={song.artUrl} />
           <div className="min-w-0 flex-1">
             <CardTitle className="flex items-center gap-2 text-base">
               {TitleLink}

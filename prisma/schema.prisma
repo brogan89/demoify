@@ -160,6 +160,10 @@ model SongProject {
   // filter. Stored denormalized since the option list is a fixed, curated set.
   genre       String?
   subgenre    String?
+  // Optional uploaded cover art: a public R2 URL (key under songs/<id>/artwork/,
+  // so deleteProject's prefix purge cleans it up). Sleeves fall back to the
+  // band's logo (avatarUrl), then the generated gradient (see art-tile.tsx).
+  artworkUrl  String?
   createdAt   DateTime @default(now())
   // Lifetime plays, counted per song URL so they survive new version uploads.
   playCount   Int      @default(0)

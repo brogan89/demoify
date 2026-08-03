@@ -29,6 +29,9 @@ export type Track = {
   title: string;
   slug: string;
   band: { username: string; displayName: string };
+  // Resolved sleeve image (artwork ?? band logo) for the bottom bar, snapshot
+  // at enqueue time like `title`; null renders the generated gradient.
+  artUrl: string | null;
 };
 
 type PlayerContextValue = {

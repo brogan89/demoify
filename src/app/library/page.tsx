@@ -37,7 +37,7 @@ export default async function LibraryPage() {
     include: {
       project: {
         include: {
-          band: { select: { username: true, displayName: true } },
+          band: { select: { username: true, displayName: true, avatarUrl: true } },
           _count: { select: { likes: true, comments: true } },
           versions: {
             orderBy: { versionNumber: "desc" },
@@ -59,6 +59,7 @@ export default async function LibraryPage() {
     commentCount: l.project._count.comments,
     liked: true,
     isPrivate: l.project.visibility === "PRIVATE",
+    artUrl: l.project.artworkUrl ?? l.project.band.avatarUrl,
     band: { username: l.project.band.username, displayName: l.project.band.displayName },
     version: {
       ...l.project.versions[0],

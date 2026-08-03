@@ -55,7 +55,7 @@ export default async function Home() {
     orderBy: { createdAt: "desc" },
     take: 5,
     include: {
-      band: { select: { username: true, displayName: true } },
+      band: { select: { username: true, displayName: true, avatarUrl: true } },
       _count: { select: { likes: true, comments: true } },
       likes: { where: { userId: viewerId }, select: { id: true } },
       versions: {
@@ -82,6 +82,7 @@ export default async function Home() {
     commentCount: s._count.comments,
     liked: s.likes.length > 0,
     isPrivate: false,
+    artUrl: s.artworkUrl ?? s.band.avatarUrl,
     band: s.band,
     version: {
       ...s.versions[0],

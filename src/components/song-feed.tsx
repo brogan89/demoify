@@ -29,6 +29,7 @@ function toTrack(card: SongCardData): Track {
     title: card.title,
     slug: card.slug,
     band: card.band,
+    artUrl: card.artUrl,
   };
 }
 
@@ -72,7 +73,7 @@ export function SongFeed({
               >
                 <CardHeader>
                   <div className="flex min-w-0 items-center gap-3">
-                    <ArtTile seed={card.id} size="md">
+                    <ArtTile seed={card.id} size="md" src={card.artUrl}>
                       {active && (
                         <span className="absolute inset-0 flex items-center justify-center bg-black/35">
                           <Equalizer playing={playing} className="h-4 text-white" />

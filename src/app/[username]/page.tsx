@@ -80,6 +80,7 @@ export default async function ArtistProfilePage({
     commentCount: s._count.comments,
     liked: s.likes.length > 0,
     isPrivate: s.visibility === "PRIVATE",
+    artUrl: s.artworkUrl ?? band.avatarUrl,
     band: { username: band.username, displayName: band.displayName },
     version: {
       ...s.versions[0],

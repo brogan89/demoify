@@ -20,7 +20,13 @@ async function getProject(username: string, slug: string) {
     where: { slug, band: { username } },
     include: {
       band: {
-        select: { id: true, username: true, displayName: true, payoutsEnabled: true },
+        select: {
+          id: true,
+          username: true,
+          displayName: true,
+          payoutsEnabled: true,
+          avatarUrl: true,
+        },
       },
       _count: { select: { likes: true } },
       versions: { orderBy: { versionNumber: "desc" } },
@@ -107,10 +113,13 @@ export default async function PublicSongPage({
         })) !== null
       : false;
 
+  // Sleeve image: uploaded artwork, else the band's logo, else the gradient.
+  const artUrl = project.artworkUrl ?? project.band.avatarUrl;
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <div className="mb-6 flex items-start gap-4">
-        <ArtTile seed={project.id} size="lg" />
+        <ArtTile seed={project.id} size="lg" src={artUrl} />
         <div className="min-w-0">
           <h1 className="flex items-center gap-2 font-heading text-3xl font-bold tracking-tight break-words md:text-4xl">
             {project.title}
@@ -196,6 +205,7 @@ export default async function PublicSongPage({
           username: project.band.username,
           displayName: project.band.displayName,
         }}
+        artUrl={artUrl}
         playCount={project.playCount}
         comments={comments}
         currentUserId={currentUserId}

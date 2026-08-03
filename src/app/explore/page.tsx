@@ -73,7 +73,7 @@ export default async function ExplorePage({
         : { createdAt: "desc" },
     take: 50,
     include: {
-      band: { select: { username: true, displayName: true } },
+      band: { select: { username: true, displayName: true, avatarUrl: true } },
       _count: { select: { likes: true, comments: true } },
       likes: { where: { userId: viewerId }, select: { id: true } },
       // Latest version powers inline playback (and the waveform) in the feed.
@@ -99,6 +99,7 @@ export default async function ExplorePage({
       commentCount: s._count.comments,
       liked: s.likes.length > 0,
       isPrivate: s.visibility === "PRIVATE",
+      artUrl: s.artworkUrl ?? s.band.avatarUrl,
       band: s.band,
       version: {
         ...s.versions[0],
@@ -138,6 +139,8 @@ export default async function ExplorePage({
         commentCount: 0,
         liked: false,
         isPrivate: false,
+        // Federated tracks carry no artwork over the wire — gradient sleeve.
+        artUrl: null,
         band: { username: "", displayName: t.artistName },
         external: { trackUrl: t.trackUrl, artistUrl: t.artistUrl, originName: t.instance.name },
       },

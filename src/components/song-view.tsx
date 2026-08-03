@@ -42,6 +42,7 @@ export function SongView({
   title,
   slug,
   band,
+  artUrl,
   playCount,
   comments,
   currentUserId,
@@ -53,6 +54,8 @@ export function SongView({
   title: string;
   slug: string;
   band: { username: string; displayName: string };
+  // Resolved sleeve image (artwork ?? band logo) passed into queued tracks.
+  artUrl: string | null;
   playCount: number;
   comments: CommentDTO[];
   currentUserId: string | null;
@@ -75,6 +78,7 @@ export function SongView({
       title,
       slug,
       band,
+      artUrl,
     };
   }
 

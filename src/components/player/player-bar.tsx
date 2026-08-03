@@ -27,7 +27,7 @@ export function PlayerBar() {
           tabIndex={-1}
           className="hidden sm:block"
         >
-          <ArtTile seed={current.projectId} size="sm">
+          <ArtTile seed={current.projectId} size="sm" src={current.artUrl}>
             <Equalizer playing={playing} className="h-3.5 text-white" />
           </ArtTile>
         </Link>

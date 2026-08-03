@@ -163,3 +163,29 @@ export async function setSongGenre(
   revalidatePath(`/${project.band.username}/${project.slug}`);
   return { ok: true };
 }
+
+/** Set or clear a song's uploaded cover art (null = back to logo/gradient fallback). */
+export async function setSongArtwork(projectId: string, artworkUrl: string | null) {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const project = await prisma.songProject.findUnique({
+    where: { id: projectId },
+    include: { band: { select: { username: true } } },
+  });
+  if (!project) return { error: "Song not found" };
+
+  const role = await getMembership(project.bandId, user.id);
+  if (!canManageSongs(role)) return { error: "Not allowed" };
+
+  await prisma.songProject.update({ where: { id: projectId }, data: { artworkUrl } });
+
+  // No syncTrack: the federation payload carries no artwork field, so there's
+  // nothing to mirror to the hub. Old R2 objects aren't deleted on replace or
+  // remove (matches updateArtistProfile); they're reclaimed by deleteProject's
+  // songs/<id>/ prefix purge when the song goes away.
+
+  revalidatePath(`/dashboard/${projectId}`);
+  revalidatePath(`/${project.band.username}/${project.slug}`);
+  return { ok: true };
+}

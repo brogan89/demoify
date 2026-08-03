@@ -10,6 +10,7 @@ import { SongView, type VersionDTO } from "@/components/song-view";
 import { type CommentDTO } from "@/components/comments";
 import { parsePeaksJson } from "@/lib/waveform";
 import { UploadVersion } from "@/components/upload-version";
+import { SongArtworkEditor } from "@/components/song-artwork-editor";
 import { DeleteSongButton } from "@/components/delete-song-button";
 import { VisibilityToggle } from "@/components/visibility-toggle";
 import { GenreEditor } from "@/components/genre-editor";
@@ -26,7 +27,15 @@ export default async function ProjectPage({
   const project = await prisma.songProject.findUnique({
     where: { id: projectId },
     include: {
-      band: { select: { id: true, username: true, displayName: true, credits: true } },
+      band: {
+        select: {
+          id: true,
+          username: true,
+          displayName: true,
+          credits: true,
+          avatarUrl: true,
+        },
+      },
       versions: { orderBy: { versionNumber: "desc" } },
       comments: {
         orderBy: { createdAt: "desc" },
@@ -113,6 +122,18 @@ export default async function ProjectPage({
 
       {canManage && (
         <div className="mb-8">
+          <h2 className="mb-3 text-sm font-medium">Artwork</h2>
+          <SongArtworkEditor
+            projectId={project.id}
+            artworkUrl={project.artworkUrl}
+            fallbackArtUrl={project.band.avatarUrl}
+            uploadsEnabled={isR2Configured()}
+          />
+        </div>
+      )}
+
+      {canManage && (
+        <div className="mb-8">
           <h2 className="mb-3 text-sm font-medium">Upload new version</h2>
           <UploadVersion
             projectId={project.id}
@@ -132,6 +153,7 @@ export default async function ProjectPage({
           username: project.band.username,
           displayName: project.band.displayName,
         }}
+        artUrl={project.artworkUrl ?? project.band.avatarUrl}
         playCount={project.playCount}
         comments={comments}
         currentUserId={user.id}

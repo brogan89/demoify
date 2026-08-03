@@ -14,8 +14,8 @@ function hashSeed(seed: string): number {
 
 /**
  * Deterministic "sleeve art" gradient for a seed (song id, band username…).
- * Songs have no cover art in the data model, so every track gets a generated
- * sleeve instead — same seed, same sleeve, everywhere it appears.
+ * The fallback when a song has neither uploaded artwork nor an artist logo —
+ * same seed, same sleeve, everywhere it appears.
  *
  * Hues ride the brand arc (indigo 250° → violet → magenta → pink, wrapping
  * past 360°); lightness/chroma are fixed so every tile stays in-family on both
@@ -44,16 +44,21 @@ const SIZES = {
 } as const;
 
 /**
- * The generated sleeve as a tile, with an optional overlay slot (equalizer,
- * play glyph). Decorative — hidden from assistive tech.
+ * A song's sleeve as a tile, with an optional overlay slot (equalizer, play
+ * glyph). Renders `src` (uploaded artwork or artist logo, resolved by the
+ * caller) over the generated gradient; the gradient stays underneath as the
+ * backdrop while loading, on a broken URL, and behind transparent logos.
+ * Decorative — hidden from assistive tech.
  */
 export function ArtTile({
   seed,
+  src,
   size = "md",
   className,
   children,
 }: {
   seed: string;
+  src?: string | null;
   size?: keyof typeof SIZES;
   className?: string;
   children?: ReactNode;
@@ -68,6 +73,18 @@ export function ArtTile({
         className,
       )}
     >
+      {src && (
+        // Served straight from the public R2 bucket; the repo intentionally
+        // uses no next/image.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          className="absolute inset-0 size-full object-cover"
+        />
+      )}
       {children}
     </div>
   );
