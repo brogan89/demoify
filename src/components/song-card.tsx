@@ -160,7 +160,7 @@ export function SongCard({ song, isAuthed }: { song: SongCardData; isAuthed: boo
             )}
           </div>
         </div>
-        <CardAction>
+        <CardAction className="max-sm:col-start-1 max-sm:row-span-1 max-sm:row-start-2 max-sm:justify-self-start">
           <SongStats
             playCount={song.playCount}
             likeCount={song.likeCount}

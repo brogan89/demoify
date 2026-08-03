@@ -36,7 +36,14 @@ _Last updated: 2026-08-03_
   reveals.
 - SongFeed subscribes to `playing`/`isActive` only — never `usePlayerTime`
   (per-tick re-render protection).
-- The feed hides the upload date below `sm` so titles keep room on phones.
+- The feed hides the upload date below `sm` so titles keep room on phones, and
+  `CardAction` (stats) drops to its own row below `sm`
+  (`max-sm:col-start-1 max-sm:row-start-2 …` in song-feed/song-card).
+- **Always give grids an explicit `grid-cols-1` at mobile** (Tailwind emits
+  `minmax(0, 1fr)`). An implicit auto track sizes to item min-content — a
+  no-wrap child (e.g. a `truncate` URL) silently pushed the home hero 12px
+  past the viewport until `grid-cols-1` was added. `truncate`/`min-w-0` only
+  work when the track can shrink.
 
 ## Next steps
 

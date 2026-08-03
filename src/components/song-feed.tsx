@@ -109,7 +109,9 @@ export function SongFeed({
                       </Link>
                     </div>
                   </div>
-                  <CardAction>
+                  {/* On phones the stats drop to their own row so the title
+                      keeps the width; from sm they sit top-right as usual. */}
+                  <CardAction className="max-sm:col-start-1 max-sm:row-span-1 max-sm:row-start-2 max-sm:justify-self-start">
                     <SongStats
                       playCount={playCountFor(card.id, card.playCount)}
                       likeCount={card.likeCount}

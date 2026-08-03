@@ -108,7 +108,9 @@ export default async function Home() {
       />
 
       {/* Hero */}
-      <section className="mx-auto grid max-w-5xl items-center gap-12 px-4 pt-16 pb-16 md:grid-cols-2 md:pt-24 md:pb-24">
+      {/* grid-cols-1 (= minmax(0,1fr)) matters: with an implicit track, the
+          mock card's no-wrap URL inflates min-content past the viewport. */}
+      <section className="mx-auto grid max-w-5xl grid-cols-1 items-center gap-12 px-4 pt-16 pb-16 md:grid-cols-2 md:pt-24 md:pb-24">
         <div className="space-y-6">
           <span className="inline-flex items-center gap-2.5 rounded-full border bg-card/60 px-3.5 py-1.5 font-mono text-xs tracking-widest text-muted-foreground uppercase animate-in fade-in slide-in-from-bottom-2 duration-700">
             <Equalizer className="h-3 text-primary" />
@@ -248,7 +250,7 @@ export default async function Home() {
             How it works
           </h2>
         </Reveal>
-        <div className="mt-8 grid gap-6 sm:grid-cols-3">
+        <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3">
           {PILLARS.map((f, i) => (
             <Reveal key={f.title} delay={i * 100}>
               <div className="group h-full rounded-xl bg-card p-6 ring-1 ring-foreground/10 transition-[transform,box-shadow] duration-300 hover:-translate-y-0.5 hover:shadow-glow-sm">
@@ -284,7 +286,7 @@ export default async function Home() {
 
       {/* Who it's for */}
       <section id="who-its-for" className="mx-auto max-w-5xl px-4 pt-16 md:pt-20">
-        <div className="grid gap-6 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <Reveal>
             <div className="h-full rounded-xl border p-6">
               <h3 className="font-heading text-xl font-semibold">For Artists</h3>
@@ -307,7 +309,7 @@ export default async function Home() {
 
       {/* Support + self-hosting */}
       <section id="support" className="mx-auto max-w-5xl px-4 pt-16 md:pt-20">
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Reveal className="h-full">
             {/* The page's one gradient-border card — the 💜 is literally on-brand now. */}
             <div className="h-full rounded-xl bg-brand-gradient p-px shadow-glow-sm">
