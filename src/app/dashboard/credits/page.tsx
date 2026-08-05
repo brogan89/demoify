@@ -6,6 +6,7 @@ import { isStripeConfigured } from "@/lib/stripe";
 import {
   CREDIT_PACKAGES,
   ENGAGEMENT_CREDITS,
+  PLAY_CREDIT_SECONDS,
   UPLOAD_COST,
   uploadsRemaining,
   creditsEnabled,
@@ -58,7 +59,7 @@ export default async function CreditsPage() {
             </li>
             <li className="flex items-center gap-2">
               <Play className="size-3.5" />
-              Play a song — +{ENGAGEMENT_CREDITS.play} credits
+              Play a song for {PLAY_CREDIT_SECONDS} seconds — +{ENGAGEMENT_CREDITS.play} credits
             </li>
           </ul>
         </div>

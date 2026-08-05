@@ -49,7 +49,7 @@ and is open source, so you can [host your own instance](#self-hosting) and even
   self-serve at `/dashboard/settings`, including account deletion (guarded
   against leaving a band without an admin or orphaning songs).
 - **Credits economy (optional)** — uploads cost credits; new artists get a starter
-  balance, and engaging with *other* bands' songs (likes, comments, full plays)
+  balance, and engaging with *other* bands' songs (likes, comments, 30-second plays)
   earns more. Buy top-ups via Stripe, redeem free-credit or discount coupon
   codes, or disable the whole economy for free, unlimited uploads (see
   [Self-hosting](#self-hosting)). See [`docs/credits-and-payments.md`](docs/credits-and-payments.md).

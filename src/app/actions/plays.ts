@@ -15,10 +15,14 @@ export async function recordPlay(projectId: string) {
   });
 }
 
-// Listening to a song start-to-end rewards the listener with credits (once per
-// song; not for your own band's songs). Anonymous listeners still get their play
-// counted via recordPlay — they just don't earn credits.
-export async function recordFullPlay(projectId: string): Promise<{ earned: number }> {
+// Listening to a song for PLAY_CREDIT_SECONDS (or nearly all of a shorter song)
+// rewards the listener with credits (once per song; not for your own band's
+// songs). The threshold is enforced client-side by the player — like recordPlay,
+// this action trusts the client. The ledger `reason` stays "play" so credits
+// earned under the old full-play rule keep blocking re-earns on the same song.
+// Anonymous listeners still get their play counted via recordPlay — they just
+// don't earn credits.
+export async function recordListen(projectId: string): Promise<{ earned: number }> {
   const user = await getCurrentUser();
   if (!user) return { earned: 0 };
 

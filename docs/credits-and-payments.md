@@ -62,13 +62,18 @@ without paying:
 | Action | Reward | Constant |
 | --- | --- | --- |
 | Like a song | +1 credit | `ENGAGEMENT_CREDITS.like` |
-| Comment on a song | +2 credits | `ENGAGEMENT_CREDITS.comment` |
-| Play a song (full play) | +3 credits | `ENGAGEMENT_CREDITS.play` |
+| Comment on a song | +3 credits | `ENGAGEMENT_CREDITS.comment` |
+| Play a song for 30 seconds | +2 credits | `ENGAGEMENT_CREDITS.play` (threshold: `PLAY_CREDIT_SECONDS`) |
 
 Granted by `grantEngagementCredits` (`src/lib/engagement.ts`), called from the
 like/comment/play server actions (`src/app/actions/likes.ts`,
 `src/app/actions/comments.ts`, `src/app/actions/plays.ts`):
 
+- **A play qualifies after `PLAY_CREDIT_SECONDS` (30s) of actual listening** —
+  accumulated client-side by the player from `timeupdate` deltas, so seeking
+  ahead doesn't count; songs shorter than the threshold qualify by playing
+  (nearly) to the end. The server action trusts the client's report, same as
+  play counting.
 - **No self-farming** — engaging with a song from a band you're a member of
   pays out nothing (`getMembership` + `isMember` check before granting).
 - **Credits land in the engager's active band**, not the band whose song they
@@ -250,8 +255,10 @@ Spending (verified):
   **200** and signs the URL.
 
 Engagement (verified):
-- Liking/commenting/playing another band's song grants the right amount to your
-  active band; repeating the same action on the same song grants nothing extra.
+- Liking/commenting on another band's song grants the right amount to your
+  active band; playing one grants +2 after 30 seconds of actual listening
+  (seeking doesn't count; a song shorter than 30s qualifies near its end).
+- Repeating the same action on the same song grants nothing extra.
 - Engaging with your own band's song grants nothing.
 
 Coupons (verified against the database directly):

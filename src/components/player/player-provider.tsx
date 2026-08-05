@@ -11,7 +11,8 @@ import {
   type ReactNode,
 } from "react";
 import { toast } from "sonner";
-import { recordPlay, recordFullPlay } from "@/app/actions/plays";
+import { recordPlay, recordListen } from "@/app/actions/plays";
+import { PLAY_CREDIT_SECONDS } from "@/lib/credits";
 
 /**
  * A playable track. Carries everything the persistent bottom bar needs to render
@@ -86,6 +87,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const startAtRef = useRef<number | null>(null);
   // Count at most one play per project per session, so resume/seek don't inflate it.
   const countedRef = useRef<Set<string>>(new Set());
+  // Request listen credits at most once per project per session (mirrors
+  // countedRef); the server is idempotent regardless (repeat = 0 credits).
+  const creditedRef = useRef<Set<string>>(new Set());
+  // Seconds actually listened on the current track load — seeks don't count.
+  const listenedRef = useRef(0);
+  const lastTickRef = useRef(0);
   // Mirror of the queue, written only in callbacks, so the stable `next()` can read
   // the latest queue length without a render-time ref write.
   const queueRef = useRef(queue);
@@ -152,6 +159,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (a) setPlaying(!a.paused);
   }, []);
 
+  const maybeAwardListenCredits = useCallback((pid: string) => {
+    if (creditedRef.current.has(pid)) return;
+    creditedRef.current.add(pid);
+    void recordListen(pid).then((res) => {
+      if (res.earned > 0) toast.success(`+${res.earned} credits for listening`);
+    });
+  }, []);
+
   const next = useCallback(() => {
     setIndex((i) => (i + 1 < queueRef.current.length ? i + 1 : i));
   }, []);
@@ -213,6 +228,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
             syncPlaying();
             setCurrentTime(0);
             setDuration(current?.duration ?? 0);
+            listenedRef.current = 0;
+            lastTickRef.current = 0;
           }}
           onPlay={() => {
             setPlaying(true);
@@ -226,10 +243,28 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           onPause={() => setPlaying(false)}
           onPlaying={syncPlaying}
           onTimeUpdate={(e) => {
-            setCurrentTime(e.currentTarget.currentTime);
+            const t = e.currentTarget.currentTime;
+            setCurrentTime(t);
             // Continuously reconcile the button with reality while audio plays, so any
             // post-navigation desync self-corrects within a tick.
             syncPlaying();
+            // Accumulate actual listening toward the play credit. Ticks arrive every
+            // ~250ms while playing (background tabs may throttle to ~1s); a larger
+            // jump is a seek, a negative one a rewind — neither counts as listening.
+            const delta = t - lastTickRef.current;
+            lastTickRef.current = t;
+            if (delta > 0 && delta <= 2) {
+              listenedRef.current += delta;
+              const dur = e.currentTarget.duration;
+              // Songs shorter than the threshold qualify by (nearly) finishing; the
+              // 1.5s slack lets the last tick before `ended` trip the check.
+              const threshold =
+                Number.isFinite(dur) && dur > 0
+                  ? Math.min(PLAY_CREDIT_SECONDS, Math.max(dur - 1.5, 0))
+                  : PLAY_CREDIT_SECONDS;
+              const pid = current?.projectId;
+              if (pid && listenedRef.current >= threshold) maybeAwardListenCredits(pid);
+            }
           }}
           onLoadedMetadata={(e) => {
             setDuration(e.currentTarget.duration);
@@ -241,12 +276,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           }}
           onEnded={() => {
             setPlaying(false);
-            const pid = current?.projectId;
-            if (pid) {
-              void recordFullPlay(pid).then((res) => {
-                if (res.earned > 0) toast.success(`+${res.earned} credits for listening`);
-              });
-            }
             // Auto-advance to the next queued track.
             next();
           }}

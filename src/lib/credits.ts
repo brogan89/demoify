@@ -37,11 +37,18 @@ export const NEW_ARTIST_CREDITS = UPLOAD_COST;
  */
 export const ENGAGEMENT_CREDITS = {
   like: 1,
-  comment: 2,
-  play: 3,
+  comment: 3,
+  play: 2,
 } as const;
 
 export type EngagementReason = keyof typeof ENGAGEMENT_CREDITS;
+
+/**
+ * Seconds of actual listening required to earn `ENGAGEMENT_CREDITS.play`.
+ * Tracked client-side by the player (seeks don't count); songs shorter than
+ * this qualify by playing (nearly) to the end.
+ */
+export const PLAY_CREDIT_SECONDS = 30;
 
 export type CreditPackage = {
   id: string;
