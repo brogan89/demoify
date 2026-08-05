@@ -1,9 +1,13 @@
 # Current state — demoify
 
-_Last updated: 2026-08-03_
+_Last updated: 2026-08-06_
 
 ## Where things left off
 
+- **Marketing strategy adopted (2026-08-06)** — operating plan in
+  [marketing-strategy.md](marketing-strategy.md) (supersedes
+  `docs/Demoify_Marketing_Plan.pptx`); drive to a free staggered public launch
+  Sep 1–4, 2026. ADR: `memory/decisions/2026-08-06-marketing-strategy.md`.
 - **"Studio Glow" visual redesign implemented — uncommitted in the working
   tree.** Full premium restyle for musicians/producers: violet→magenta brand
   gradient (`--brand-from`/`--brand-to` + `bg-brand-gradient` /
