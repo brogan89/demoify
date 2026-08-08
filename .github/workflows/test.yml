@@ -1,0 +1,38 @@
+name: Tests
+
+# Fast feedback before a change reaches main. deploy.yml also runs these checks,
+# but every one of its steps sits behind `steps.gate.outputs.ready`, so a fork or
+# a checkout without deploy secrets gets no signal from it at all.
+#
+# No paths-ignore here, unlike deploy.yml: a docs-only PR still gets a run. It's
+# cheap, and it avoids "tests were skipped, then main went red".
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # No `npx prisma generate` step: none of the units under test reach
+      # @/generated/prisma/client. Add one here the day a test mocks the DB.
+      - name: Run unit tests
+        run: npm test
+
+      - name: Verify write gates
+        run: npm run check:gates

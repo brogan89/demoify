@@ -122,16 +122,30 @@ secret — D1 is a binding.
 
 Locally:
 ```
-npm run deploy        # opennextjs-cloudflare build && deploy
+npm run deploy        # predeploy (tests + write gates), then build && deploy
 ```
 Or push to `main` and let GitHub Actions do it (see below).
+
+`predeploy` runs `npm test && npm run check:gates` first, so a red test aborts before
+anything is built or shipped. Two consequences worth knowing:
+- It needs devDependencies installed. After `npm ci --omit=dev` the command fails with
+  `vitest: command not found` rather than deploying — the right direction to fail in,
+  but surprising if you don't expect it.
+- `npm run deploy --ignore-scripts` skips the checks. That's the emergency-hotfix
+  override; prefer it over deleting the `predeploy` script.
 
 ### GitHub Actions secrets (for CI in `.github/workflows/deploy.yml`)
 - `CLOUDFLARE_API_TOKEN` — use the **"Edit Cloudflare Workers"** token template (also needs D1
   edit permission for the migrations step).
 - `CLOUDFLARE_ACCOUNT_ID` — **already set** (equals your R2 account id).
 
-The CI workflow skips (stays green) until both are present, then migrates D1 + deploys.
+The CI workflow fails loudly if either is missing — a silently skipped deploy looks green
+but leaves production stale. With both present it runs the unit tests and the write-gate
+check, then migrates D1 + deploys. Those checks run *before* the migration on purpose, so
+a failure stops the deploy without having moved production's schema.
+
+`.github/workflows/test.yml` runs the same tests on every pull request, without needing
+the deploy secrets.
 
 Each successful deploy is versioned `vYYYY.MM.DD-<run#>`: the value is baked into the
 build (shown in the site footer, linking to the matching tag) and pushed back as an
@@ -149,6 +163,7 @@ Both `npm run dev` and `npm run preview` use the **local emulated D1** (no setup
 you change the schema, re-run `npx wrangler d1 migrations apply demoify --local` first.
 
 ## Verification checklist
+- [ ] `npm test` passes (a failure blocks both deploy routes).
 - [ ] `npm run preview` boots; sign-up works. *(signup → D1 already verified via `wrangler dev`)*
 - [ ] D1 migration applied remotely (`wrangler d1 migrations apply demoify --remote`). *(done)*
 - [ ] Sign up on demoify.app → verification email arrives → verify → log in.

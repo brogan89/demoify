@@ -71,3 +71,11 @@ build:
 # Run ESLint.
 lint:
     npm run lint
+
+# Run the unit tests once. Also runs in CI, and gates `npm run deploy`.
+test:
+    npm test
+
+# Run the unit tests in watch mode.
+test-watch:
+    npm run test:watch
