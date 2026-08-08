@@ -201,7 +201,7 @@ model CreditTransaction {
   bandId          String
   band            Band     @relation(fields: [bandId], references: [id], onDelete: Cascade)
   delta           Int // positive = added, negative = spent
-  reason          String // "upload" | "purchase" | "like" | "comment" | "play" | "coupon" | "gift"
+  reason          String // "upload" | "purchase" | "like" | "comment" | "play" | "coupon" | "gift" | "artist_grant"
   stripeSessionId String?  @unique
   // Engagement grants only: the user who engaged and the song (projectId) they
   // engaged with. Null for upload/purchase rows. The unique constraint caps each

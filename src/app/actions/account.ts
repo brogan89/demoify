@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/session";
+import { requireVerifiedUser } from "@/lib/session";
+import { isPublicUrlUnder } from "@/lib/r2";
 import {
   normalizeUsername,
   isUserUsernameAvailable,
@@ -40,9 +41,10 @@ export async function checkUsernameAvailable(
 export async function updateAccountProfile(input: {
   displayName?: string;
   avatarUrl?: string;
-}): Promise<{ ok?: true; error?: string }> {
-  const user = await getCurrentUser();
-  if (!user) return { error: "Unauthorized" };
+}): Promise<{ ok?: true; error?: string; code?: string }> {
+  const gate = await requireVerifiedUser();
+  if (!gate.ok) return { error: gate.error, code: gate.code };
+  const user = gate.user;
 
   const data: { displayName?: string; avatarUrl?: string } = {};
   if (input.displayName !== undefined) {
@@ -53,7 +55,13 @@ export async function updateAccountProfile(input: {
     }
     data.displayName = name;
   }
-  if (input.avatarUrl !== undefined) data.avatarUrl = input.avatarUrl;
+  if (input.avatarUrl !== undefined) {
+    // Must be the avatar this user just uploaded, not an arbitrary client string.
+    if (!isPublicUrlUnder(input.avatarUrl, `avatars/${user.id}/`)) {
+      return { error: "Invalid avatar URL" };
+    }
+    data.avatarUrl = input.avatarUrl;
+  }
   if (Object.keys(data).length === 0) return { ok: true };
 
   await prisma.user.update({ where: { id: user.id }, data });

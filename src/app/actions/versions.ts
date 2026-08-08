@@ -2,9 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/session";
+import { requireVerifiedUser } from "@/lib/session";
 import { getMembership, canManageSongs, isMember } from "@/lib/band";
 import { UPLOAD_COST, creditsEnabled } from "@/lib/credits";
+import { isPublicUrlUnder } from "@/lib/r2";
 import { syncTrack } from "@/lib/federation";
 import { sanitizePeaks, serializePeaks } from "@/lib/waveform";
 
@@ -21,8 +22,9 @@ type CreateVersionInput = {
 };
 
 export async function createVersion(input: CreateVersionInput) {
-  const user = await getCurrentUser();
-  if (!user) return { error: "Unauthorized" };
+  const gate = await requireVerifiedUser("RL_UPLOAD");
+  if (!gate.ok) return { error: gate.error, code: gate.code };
+  const user = gate.user;
 
   const project = await prisma.songProject.findUnique({
     where: { id: input.projectId },
@@ -32,6 +34,13 @@ export async function createVersion(input: CreateVersionInput) {
 
   const role = await getMembership(project.bandId, user.id);
   if (!canManageSongs(role)) return { error: "Not allowed" };
+
+  // The client echoes back the publicUrl it got from /api/upload/presign, so it
+  // must be pinned to this project's own audio prefix — otherwise any string
+  // would be stored and then federated out as this song's audio.
+  if (!isPublicUrlUnder(input.audioUrl, `songs/${project.id}/`)) {
+    return { error: "Invalid audio URL" };
+  }
 
   // D1 (SQLite) has no interactive transactions, so we can't read-then-write in one
   // atomic block. Instead: charge atomically up front (conditional decrement), then
@@ -126,8 +135,9 @@ export async function createVersion(input: CreateVersionInput) {
  * and the payload must pass the same sanitizer as uploads.
  */
 export async function saveWaveform(input: { versionId: string; peaks: number[] }) {
-  const user = await getCurrentUser();
-  if (!user) return { error: "Unauthorized" };
+  const gate = await requireVerifiedUser();
+  if (!gate.ok) return { error: gate.error, code: gate.code };
+  const user = gate.user;
 
   const peaks = sanitizePeaks(input.peaks);
   if (!peaks) return { error: "Invalid peaks" };

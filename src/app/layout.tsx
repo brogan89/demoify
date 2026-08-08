@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { SiteHeader } from "@/components/site-header";
 import { FederationBanner } from "@/components/federation-banner";
+import { VerifyEmailBanner } from "@/components/verify-email-banner";
 import { SiteFooter } from "@/components/site-footer";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PlayerProvider } from "@/components/player/player-provider";
@@ -65,6 +66,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <PlayerProvider>
             <SiteHeader />
+            <VerifyEmailBanner />
             <FederationBanner />
             <main className="flex-1">{children}</main>
             <SiteFooter />

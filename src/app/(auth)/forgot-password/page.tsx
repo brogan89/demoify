@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ForgotPasswordForm } from "@/components/forgot-password-form";
+import { turnstileSiteKey } from "@/lib/turnstile";
 
 export default function ForgotPasswordPage() {
   return (
@@ -18,7 +19,7 @@ export default function ForgotPasswordPage() {
           <CardDescription>We&apos;ll email you a link to reset it.</CardDescription>
         </CardHeader>
         <CardContent>
-          <ForgotPasswordForm />
+          <ForgotPasswordForm turnstileSiteKey={turnstileSiteKey()} />
         </CardContent>
         <CardFooter className="mt-2">
           <p className="w-full text-center text-sm text-muted-foreground">

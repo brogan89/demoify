@@ -42,13 +42,30 @@ export async function sendEmail(opts: {
   if (error) throw new Error(`Email send failed: ${error.message}`);
 }
 
-/** Minimal branded button-link email body. */
+/** Escape text before it goes into the HTML email body. */
+function esc(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
+ * Minimal branded button-link email body.
+ *
+ * Every field is escaped: `body` carries user-controlled text in the
+ * change-email flow (the requested address, see src/lib/auth.ts), so an address
+ * containing markup would otherwise inject HTML into the mail we send.
+ */
 export function actionEmail(opts: { heading: string; body: string; url: string; cta: string }): string {
+  const url = esc(opts.url);
   return `
   <div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:24px">
-    <h1 style="font-size:20px;margin:0 0 12px">${opts.heading}</h1>
-    <p style="color:#444;line-height:1.5;margin:0 0 20px">${opts.body}</p>
-    <a href="${opts.url}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px">${opts.cta}</a>
-    <p style="color:#888;font-size:12px;margin:20px 0 0">If the button doesn't work, paste this link:<br>${opts.url}</p>
+    <h1 style="font-size:20px;margin:0 0 12px">${esc(opts.heading)}</h1>
+    <p style="color:#444;line-height:1.5;margin:0 0 20px">${esc(opts.body)}</p>
+    <a href="${url}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px">${esc(opts.cta)}</a>
+    <p style="color:#888;font-size:12px;margin:20px 0 0">If the button doesn't work, paste this link:<br>${url}</p>
   </div>`;
 }

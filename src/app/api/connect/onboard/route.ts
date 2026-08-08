@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/session";
+import { requireVerifiedUser, gateResponse } from "@/lib/session";
 import { getActiveBand } from "@/lib/band";
 import { isStripeConfigured, stripe, appUrl } from "@/lib/stripe";
 
@@ -15,8 +15,10 @@ export async function POST() {
     );
   }
 
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // No `gate.user` binding needed — the band, not the user, owns the payout
+  // account, and getActiveBand() re-resolves membership on its own.
+  const gate = await requireVerifiedUser();
+  if (!gate.ok) return gateResponse(gate);
 
   // Payouts are set up for the band the user is currently acting as.
   const active = await getActiveBand();

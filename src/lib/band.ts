@@ -62,6 +62,18 @@ export async function getMembership(bandId: string, userId: string): Promise<Rol
   return (m?.role as Role) ?? null;
 }
 
+/**
+ * How many artist profiles one user may create.
+ *
+ * Each new profile grants free credits (see createArtistProfile), and nothing
+ * capped that before — a single account could loop the action for one free
+ * upload per call, forever. The economic pull is mild (only the *first* profile
+ * gets the full starting balance), so this is a backstop rather than the main
+ * defence; the email gate and Turnstile do the real work. Counted over ADMIN
+ * memberships only, so being invited to other people's bands never uses it up.
+ */
+export const MAX_ARTISTS_PER_USER = 3;
+
 // --- Role predicates -------------------------------------------------------
 /** ADMIN + MANAGER can create / upload / delete songs and toggle visibility. */
 export function canManageSongs(role: Role | null): boolean {

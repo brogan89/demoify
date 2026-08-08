@@ -3,17 +3,19 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/session";
+import { getCurrentUser, requireVerifiedUser } from "@/lib/session";
 import {
   ACTIVE_BAND_COOKIE,
   getMembership,
   canManageMembers,
   canManageSongs,
+  MAX_ARTISTS_PER_USER,
   type Role,
 } from "@/lib/band";
 import { uniqueBandUsername } from "@/lib/username";
 import { STARTING_CREDITS, NEW_ARTIST_CREDITS } from "@/lib/credits";
 import { cleanSocialLinks, type SocialLinkMap } from "@/lib/socials";
+import { isPublicUrlUnder } from "@/lib/r2";
 
 const ROLES: Role[] = ["ADMIN", "MANAGER", "MEMBER"];
 const MAX_NAME_LENGTH = 60;
@@ -49,8 +51,9 @@ export async function setActiveBand(bandId: string) {
  * ADMIN and it's switched to active.
  */
 export async function createArtistProfile(input: { name: string }) {
-  const user = await getCurrentUser();
-  if (!user) return { error: "Unauthorized" };
+  const gate = await requireVerifiedUser();
+  if (!gate.ok) return { error: gate.error, code: gate.code };
+  const user = gate.user;
 
   const name = input.name.trim();
   if (!name) return { error: "Artist name is required" };
@@ -58,10 +61,18 @@ export async function createArtistProfile(input: { name: string }) {
     return { error: `Name must be ${MAX_NAME_LENGTH} characters or fewer` };
   }
 
+  // Two different counts on purpose: the cap is about profiles you *own*, so
+  // being invited to someone else's band shouldn't consume it — but the credit
+  // tier keys off ALL memberships, preserving the original behaviour exactly.
+  const [ownedProfiles, existingMemberships] = await Promise.all([
+    prisma.bandMembership.count({ where: { userId: user.id, role: "ADMIN" } }),
+    prisma.bandMembership.count({ where: { userId: user.id } }),
+  ]);
+  if (ownedProfiles >= MAX_ARTISTS_PER_USER) {
+    return { error: `You can create up to ${MAX_ARTISTS_PER_USER} artist profiles.` };
+  }
+
   // First artist gets the full starting balance; later ones get the reduced amount.
-  const existingMemberships = await prisma.bandMembership.count({
-    where: { userId: user.id },
-  });
   const credits = existingMemberships === 0 ? STARTING_CREDITS : NEW_ARTIST_CREDITS;
 
   const band = await prisma.band.create({
@@ -73,6 +84,22 @@ export async function createArtistProfile(input: { name: string }) {
   });
   await prisma.bandMembership.create({
     data: { bandId: band.id, userId: user.id, role: "ADMIN" },
+  });
+
+  // This grant used to write Band.credits and nothing else, leaving the balance
+  // and the ledger permanently out of step — and farmed credits invisible to
+  // analytics. Every other grant path writes a row; so does this one now.
+  // Not batched with the creates above: band.id isn't known until the create
+  // resolves, and D1 ignores $transaction anyway (see the note in createVersion).
+  // The @@unique([userId, reason, refId]) on CreditTransaction keeps it idempotent.
+  await prisma.creditTransaction.create({
+    data: {
+      bandId: band.id,
+      userId: user.id,
+      refId: band.id,
+      reason: "artist_grant",
+      delta: credits,
+    },
   });
 
   await writeActiveBandCookie(band.id);
@@ -88,8 +115,9 @@ export async function updateArtistProfile(input: {
   avatarUrl?: string;
   socialLinks?: SocialLinkMap;
 }) {
-  const user = await getCurrentUser();
-  if (!user) return { error: "Unauthorized" };
+  const gate = await requireVerifiedUser();
+  if (!gate.ok) return { error: gate.error, code: gate.code };
+  const user = gate.user;
 
   const role = await getMembership(input.bandId, user.id);
   if (!canManageSongs(role)) return { error: "Not allowed" };
@@ -115,7 +143,13 @@ export async function updateArtistProfile(input: {
     }
     data.bio = bio || null;
   }
-  if (input.avatarUrl !== undefined) data.avatarUrl = input.avatarUrl;
+  if (input.avatarUrl !== undefined) {
+    // Must be the logo this band just uploaded, not an arbitrary client string.
+    if (!isPublicUrlUnder(input.avatarUrl, `logos/${input.bandId}/`)) {
+      return { error: "Invalid logo URL" };
+    }
+    data.avatarUrl = input.avatarUrl;
+  }
   if (input.socialLinks !== undefined) {
     const cleaned = cleanSocialLinks(input.socialLinks);
     if ("error" in cleaned) return { error: cleaned.error };
@@ -131,8 +165,9 @@ export async function updateArtistProfile(input: {
 
 /** Add an existing Demoify user (by email) to the band with a role. ADMIN only. */
 export async function addMember(bandId: string, email: string, role: Role) {
-  const user = await getCurrentUser();
-  if (!user) return { error: "Unauthorized" };
+  const gate = await requireVerifiedUser();
+  if (!gate.ok) return { error: gate.error, code: gate.code };
+  const user = gate.user;
   if (!ROLES.includes(role)) return { error: "Invalid role" };
 
   const actorRole = await getMembership(bandId, user.id);
@@ -156,8 +191,9 @@ export async function addMember(bandId: string, email: string, role: Role) {
 }
 
 export async function removeMember(membershipId: string) {
-  const user = await getCurrentUser();
-  if (!user) return { error: "Unauthorized" };
+  const gate = await requireVerifiedUser();
+  if (!gate.ok) return { error: gate.error, code: gate.code };
+  const user = gate.user;
 
   const membership = await prisma.bandMembership.findUnique({
     where: { id: membershipId },
@@ -179,8 +215,9 @@ export async function removeMember(membershipId: string) {
 }
 
 export async function updateMemberRole(membershipId: string, role: Role) {
-  const user = await getCurrentUser();
-  if (!user) return { error: "Unauthorized" };
+  const gate = await requireVerifiedUser();
+  if (!gate.ok) return { error: gate.error, code: gate.code };
+  const user = gate.user;
   if (!ROLES.includes(role)) return { error: "Invalid role" };
 
   const membership = await prisma.bandMembership.findUnique({

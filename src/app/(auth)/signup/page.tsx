@@ -10,9 +10,11 @@ import {
 import { SignupForm } from "@/components/signup-form";
 import { SocialAuthButtons } from "@/components/social-auth-buttons";
 import { enabledSocialProviders } from "@/lib/social";
+import { turnstileSiteKey } from "@/lib/turnstile";
 
 export default function SignupPage() {
   const providers = enabledSocialProviders();
+  const siteKey = turnstileSiteKey();
 
   return (
     <div className="mx-auto flex max-w-md flex-col px-4 py-12">
@@ -23,7 +25,7 @@ export default function SignupPage() {
         </CardHeader>
         <CardContent>
           <SocialAuthButtons providers={providers} />
-          <SignupForm />
+          <SignupForm turnstileSiteKey={siteKey} />
         </CardContent>
         <CardFooter className="mt-2">
           <p className="w-full text-center text-sm text-muted-foreground">

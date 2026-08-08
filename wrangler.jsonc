@@ -41,11 +41,36 @@
 		}
 	],
 
-	// Non-secret config. Secrets (BETTER_AUTH_SECRET, STRIPE_*, R2_*, RESEND_API_KEY)
-	// are set via `wrangler secret put` / CI, NOT here. No DATABASE_URL — D1 is a binding.
+	// Cloudflare Rate Limiting — per-colo counters, no storage cost, no D1 round-trip.
+	// Bound as env.RL_* (see src/lib/rate-limit.ts). `namespace_id` is just a
+	// developer-chosen string, and `period` may only be 10 or 60 (seconds).
+	// Fully simulated by miniflare under `next dev`, so no provisioning is needed.
+	// After editing this list run `npm run cf-typegen` to refresh cloudflare-env.d.ts.
+	"ratelimits": [
+		{ "name": "RL_AUTH", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } },
+		{ "name": "RL_WRITE", "namespace_id": "1002", "simple": { "limit": 30, "period": 60 } },
+		{ "name": "RL_UPLOAD", "namespace_id": "1003", "simple": { "limit": 10, "period": 60 } }
+	],
+
+	// Non-secret config. Secrets (BETTER_AUTH_SECRET, STRIPE_*, R2_*, RESEND_API_KEY,
+	// TURNSTILE_SECRET_KEY) are set via `wrangler secret put` / CI, NOT here.
+	// No DATABASE_URL — D1 is a binding.
 	"vars": {
 		"BETTER_AUTH_URL": "https://demoify.app",
-		"FEDERATION_HUB_ENABLED": "true"
+		"FEDERATION_HUB_ENABLED": "true",
+
+		// Turnstile *site* key — public by design (it ships to the browser).
+		// The matching secret key is a Worker secret. Leave "" to disable the
+		// captcha entirely (the Better Auth plugin is only registered when the
+		// secret is present — see src/lib/auth.ts).
+		"TURNSTILE_SITE_KEY": "",
+
+		// Email-verification write-gate. Unset ⇒ ON in production, OFF in dev.
+		// Deliberately pinned to "false" for the FIRST deploy of this feature so
+		// migration 0016 (grandfathering) and the new UI ship inert; flip to
+		// "true" in a follow-up deploy to actually enforce. Flipping back is the
+		// rollback — there is no data migration to undo.
+		"REQUIRE_EMAIL_VERIFICATION": "false"
 	},
 
 	// --- Cron triggers for periodic analytics aggregation ---
@@ -71,6 +96,13 @@
 		"remote": {
 			"vars": { "BETTER_AUTH_URL": "http://localhost:3000" },
 			"images": { "binding": "IMAGES" },
+			// Mirrored from the top level — named environments inherit nothing.
+			// Without this, src/lib/rate-limit.ts finds no binding and fails open.
+			"ratelimits": [
+				{ "name": "RL_AUTH", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } },
+				{ "name": "RL_WRITE", "namespace_id": "1002", "simple": { "limit": 30, "period": 60 } },
+				{ "name": "RL_UPLOAD", "namespace_id": "1003", "simple": { "limit": 10, "period": 60 } }
+			],
 			"d1_databases": [
 				{
 					"binding": "DB",

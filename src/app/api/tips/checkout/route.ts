@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/session";
+import { requireVerifiedUser, gateResponse } from "@/lib/session";
 import { getMembership, isMember } from "@/lib/band";
 import { isStripeConfigured, stripe, appUrl } from "@/lib/stripe";
 import { isValidTipAmount, splitTip } from "@/lib/tips";
@@ -17,8 +17,9 @@ export async function POST(req: Request) {
     );
   }
 
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const gate = await requireVerifiedUser();
+  if (!gate.ok) return gateResponse(gate);
+  const user = gate.user;
 
   const {
     bandId,

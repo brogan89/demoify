@@ -1,16 +1,37 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { captcha } from "better-auth/plugins";
 import { prisma } from "@/lib/db";
 import { uniqueUserUsername } from "@/lib/username";
-import { sendEmail, actionEmail, isEmailConfigured } from "@/lib/email";
+import { sendEmail, actionEmail } from "@/lib/email";
 import { assertCanDeleteAccount } from "@/lib/account-deletion";
+import { requireEmailVerification, warnIfUndeliverable } from "@/lib/verification";
 
 const APP_URL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
 
-// Only enforce email verification when we can actually deliver the email.
-// In production Resend is configured → verification required. Locally (no
-// RESEND_API_KEY) it's relaxed so you can sign up and test without a mailbox.
-const EMAIL_VERIFICATION = isEmailConfigured();
+// Whether an unverified account is held to read-only. Governed by
+// REQUIRE_EMAIL_VERIFICATION (unset ⇒ on in production), NOT by whether Resend
+// happens to be configured — see src/lib/verification.ts for why that matters.
+const EMAIL_VERIFICATION = requireEmailVerification();
+warnIfUndeliverable();
+
+// Bot check on the endpoints an attacker would automate. Registered only when
+// the secret is present, so unconfigured environments are unaffected.
+//
+// The endpoint list is set EXPLICITLY: the plugin's default includes
+// /sign-in/email, and there is no captcha widget on the login form, so
+// accepting the default would break every login. Conversely
+// /request-password-reset IS listed, so forgot-password must send a token too.
+const captchaPlugins = process.env.TURNSTILE_SECRET_KEY
+  ? [
+      captcha({
+        provider: "cloudflare-turnstile",
+        secretKey: process.env.TURNSTILE_SECRET_KEY,
+        endpoints: ["/sign-up/email", "/send-verification-email", "/request-password-reset"],
+        allowedHostnames: [new URL(APP_URL).hostname],
+      }),
+    ]
+  : [];
 
 // Only enable a social provider when its credentials are present.
 const socialProviders: Record<string, { clientId: string; clientSecret: string }> = {};
@@ -31,6 +52,15 @@ export const auth = betterAuth({
   baseURL: APP_URL,
   trustedOrigins: [APP_URL],
   database: prismaAdapter(prisma, { provider: "sqlite" }),
+  plugins: captchaPlugins,
+  advanced: {
+    // Better Auth defaults to x-forwarded-for[0], which is attacker-controlled
+    // behind Cloudflare: the edge APPENDS the real client IP rather than
+    // replacing the header, so a client-supplied value stays at index 0. That
+    // makes every IP-keyed rate-limit bucket trivially rotated, and stores junk
+    // in session.ipAddress. CF-Connecting-IP is always overwritten at the edge.
+    ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
+  },
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: EMAIL_VERIFICATION,
@@ -111,6 +141,19 @@ export const auth = betterAuth({
           // so fall back to their name. uniqueUserUsername slugifies + uniques.
           const base = u.username || u.displayName || u.name || "user";
           const username = await uniqueUserUsername(base);
+
+          // Social signups normally arrive pre-verified: Better Auth maps the
+          // provider's `email_verified` claim straight through (Google and
+          // Apple both send it). If one ever doesn't, that user lands read-only
+          // with no password — so no reset flow to trigger a resend against.
+          // Don't force the flag; just make the situation visible in logs.
+          const isSocialSignup = !u.username;
+          if (isSocialSignup && u.emailVerified !== true) {
+            console.warn(
+              `[auth] Social signup for ${u.email} arrived with emailVerified=${u.emailVerified} — ` +
+                "this account will be read-only until verified.",
+            );
+          }
           return {
             data: {
               ...u,

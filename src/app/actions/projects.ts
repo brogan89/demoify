@@ -6,16 +6,25 @@ import { revalidatePath } from "next/cache";
 // caller (CreateSongForm) can upload the first audio version before navigating.
 import { ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/session";
+import { requireVerifiedUser } from "@/lib/session";
 import { getActiveBand, getMembership, canManageSongs } from "@/lib/band";
-import { isR2Configured, r2, R2_BUCKET } from "@/lib/r2";
+import { isR2Configured, r2, R2_BUCKET, isPublicUrlUnder } from "@/lib/r2";
 import { slugify, uniqueSlug } from "@/lib/slug";
 import { normalizeGenre } from "@/lib/genres";
 import { syncTrack, removeTrack } from "@/lib/federation";
 
 export async function createProject(formData: FormData) {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  // Unlike its neighbours this action navigates on refusal rather than
+  // returning — the caller treats a redirect as the normal "you can't be here"
+  // path. Rate-limiting still returns, since bouncing someone to /verify-email
+  // for typing too fast would be nonsense.
+  const gate = await requireVerifiedUser();
+  if (!gate.ok) {
+    if (gate.code === "UNAUTHORIZED") redirect("/login");
+    if (gate.code === "EMAIL_NOT_VERIFIED") redirect("/verify-email");
+    return { error: gate.error, code: gate.code };
+  }
+  const user = gate.user;
 
   const active = await getActiveBand();
   // Only ADMIN/MANAGER may add songs; members get no create form, but guard anyway.
@@ -45,8 +54,9 @@ export async function createProject(formData: FormData) {
 }
 
 export async function deleteProject(projectId: string) {
-  const user = await getCurrentUser();
-  if (!user) return { error: "Unauthorized" };
+  const gate = await requireVerifiedUser();
+  if (!gate.ok) return { error: gate.error, code: gate.code };
+  const user = gate.user;
 
   const project = await prisma.songProject.findUnique({
     where: { id: projectId },
@@ -105,8 +115,9 @@ export async function setSongVisibility(
   projectId: string,
   visibility: "PUBLIC" | "PRIVATE",
 ) {
-  const user = await getCurrentUser();
-  if (!user) return { error: "Unauthorized" };
+  const gate = await requireVerifiedUser();
+  if (!gate.ok) return { error: gate.error, code: gate.code };
+  const user = gate.user;
   if (visibility !== "PUBLIC" && visibility !== "PRIVATE") {
     return { error: "Invalid visibility" };
   }
@@ -136,8 +147,9 @@ export async function setSongGenre(
   rawGenre: string | null,
   rawSubgenre: string | null,
 ) {
-  const user = await getCurrentUser();
-  if (!user) return { error: "Unauthorized" };
+  const gate = await requireVerifiedUser();
+  if (!gate.ok) return { error: gate.error, code: gate.code };
+  const user = gate.user;
 
   const project = await prisma.songProject.findUnique({
     where: { id: projectId },
@@ -166,8 +178,9 @@ export async function setSongGenre(
 
 /** Set or clear a song's uploaded cover art (null = back to logo/gradient fallback). */
 export async function setSongArtwork(projectId: string, artworkUrl: string | null) {
-  const user = await getCurrentUser();
-  if (!user) return { error: "Unauthorized" };
+  const gate = await requireVerifiedUser();
+  if (!gate.ok) return { error: gate.error, code: gate.code };
+  const user = gate.user;
 
   const project = await prisma.songProject.findUnique({
     where: { id: projectId },
@@ -177,6 +190,11 @@ export async function setSongArtwork(projectId: string, artworkUrl: string | nul
 
   const role = await getMembership(project.bandId, user.id);
   if (!canManageSongs(role)) return { error: "Not allowed" };
+
+  // null clears the art; anything else must be our own object for this song.
+  if (artworkUrl !== null && !isPublicUrlUnder(artworkUrl, `songs/${projectId}/artwork/`)) {
+    return { error: "Invalid artwork URL" };
+  }
 
   await prisma.songProject.update({ where: { id: projectId }, data: { artworkUrl } });
 

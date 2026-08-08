@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ResendVerificationForm } from "@/components/resend-verification-form";
+import { turnstileSiteKey } from "@/lib/turnstile";
 
 export default function VerifyEmailPage() {
   return (
@@ -17,13 +18,14 @@ export default function VerifyEmailPage() {
         <CardHeader>
           <CardTitle>Verify your email</CardTitle>
           <CardDescription>
-            We sent a verification link to your inbox. Click it to activate your account, then log
-            in. Didn&apos;t get it? Resend below.
+            We sent a verification link to your inbox. Click it to confirm your address — until
+            then you can browse and listen, but not upload, comment or like. Didn&apos;t get it?
+            Resend below.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Suspense fallback={null}>
-            <ResendVerificationForm />
+            <ResendVerificationForm turnstileSiteKey={turnstileSiteKey()} />
           </Suspense>
         </CardContent>
         <CardFooter className="mt-2">

@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
+import { requireEmailVerification } from "@/lib/verification";
+import { turnstileSiteKey } from "@/lib/turnstile";
 import { AccountProfileForm } from "@/components/account-profile-form";
 import { AccountEmailForm } from "@/components/account-email-form";
 import { AccountPasswordForm } from "@/components/account-password-form";
@@ -23,7 +25,12 @@ export default async function SettingsPage() {
 
       <section className="mb-8">
         <h2 className="mb-3 text-sm font-medium">Email</h2>
-        <AccountEmailForm initialEmail={user.email} />
+        <AccountEmailForm
+          initialEmail={user.email}
+          emailVerified={user.emailVerified}
+          verificationRequired={requireEmailVerification()}
+          turnstileSiteKey={turnstileSiteKey()}
+        />
       </section>
 
       <section className="mb-8">

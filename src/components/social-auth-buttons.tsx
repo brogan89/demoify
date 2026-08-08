@@ -43,7 +43,16 @@ export function SocialAuthButtons({ providers }: { providers: SocialProvider[] }
     setBusy(provider);
     const { error } = await signIn.social({ provider, callbackURL: "/dashboard" });
     if (error) {
-      toast.error(error.message ?? `Could not sign in with ${provider}`);
+      // Better Auth refuses to link a social login onto an existing
+      // email/password account whose address is still unverified. The write
+      // gate leaves more accounts sitting unverified, so this path gets hit
+      // more often — the raw message doesn't tell anyone what to do about it.
+      const notLinked = error.message?.toLowerCase().includes("not linked");
+      toast.error(
+        notLinked
+          ? "You already have a password account with this email — verify that address first, then try again."
+          : (error.message ?? `Could not sign in with ${provider}`),
+      );
       setBusy(null);
     }
     // On success the browser is redirected to the provider, so no reset needed.

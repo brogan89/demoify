@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/session";
+import { requireVerifiedUser } from "@/lib/session";
 import { grantEngagementCredits } from "@/lib/engagement";
 
 // Record a single play against a song URL (project), not the version — so the
@@ -23,8 +23,12 @@ export async function recordPlay(projectId: string) {
 // Anonymous listeners still get their play counted via recordPlay — they just
 // don't earn credits.
 export async function recordListen(projectId: string): Promise<{ earned: number }> {
-  const user = await getCurrentUser();
-  if (!user) return { earned: 0 };
+  // Fire-and-forget from the player, so every rejection (signed out, unverified,
+  // rate-limited) degrades to "earned nothing" rather than surfacing an error —
+  // playback must never show a toast just because credits weren't granted.
+  const gate = await requireVerifiedUser();
+  if (!gate.ok) return { earned: 0 };
+  const user = gate.user;
 
   const project = await prisma.songProject.findUnique({
     where: { id: projectId },

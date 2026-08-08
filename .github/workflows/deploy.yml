@@ -67,6 +67,17 @@ jobs:
         if: steps.gate.outputs.ready == 'true'
         run: npx prisma generate
 
+      # Runs before the migration step on purpose: a failed check should stop the
+      # deploy outright, not after production's schema has already moved.
+      #
+      # `npm run lint` is deliberately NOT here yet — it currently exits non-zero
+      # on two pre-existing errors (src/app/admin/analytics/page.tsx and
+      # src/components/federation-banner-client.tsx), so adding it today would
+      # block every deploy. Fix those, then add it to this line.
+      - name: Verify write gates
+        if: steps.gate.outputs.ready == 'true'
+        run: npm run check:gates
+
       - name: Apply D1 migrations (production)
         if: steps.gate.outputs.ready == 'true'
         run: npx wrangler d1 migrations apply demoify --remote

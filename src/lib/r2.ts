@@ -38,3 +38,27 @@ export function r2(): S3Client {
 export function publicUrlFor(key: string): string {
   return `${R2_PUBLIC_URL}/${key}`;
 }
+
+/** Object keys we mint are always `<uuid>.<ext>` — see the presign route. */
+const OBJECT_NAME = /^[A-Za-z0-9_-]+\.[A-Za-z0-9]+$/;
+
+/**
+ * True when `url` is one of our own R2 objects directly under `prefix`.
+ *
+ * The presign route returns a `publicUrl` to the browser, and the browser hands
+ * it back to a server action to store. Nothing made that round trip trustworthy:
+ * the client can send any string. Unchecked, that means hotlinking arbitrary
+ * origins, and — because src/lib/federation.ts pushes audioUrl out to the hub —
+ * propagating an attacker-chosen URL to every federated instance.
+ *
+ * Requiring a single `<uuid>.<ext>` segment (no slashes) also keeps the prefixes
+ * from bleeding into each other: an artwork URL under `songs/<id>/artwork/`
+ * fails validation as audio under `songs/<id>/`, because the remainder still
+ * contains a slash.
+ */
+export function isPublicUrlUnder(url: string, prefix: string): boolean {
+  if (!R2_PUBLIC_URL) return false;
+  const base = `${R2_PUBLIC_URL}/${prefix}`;
+  if (!url.startsWith(base)) return false;
+  return OBJECT_NAME.test(url.slice(base.length));
+}

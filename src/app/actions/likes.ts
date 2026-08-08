@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/session";
+import { requireVerifiedUser } from "@/lib/session";
 import { grantEngagementCredits } from "@/lib/engagement";
 
 /**
@@ -11,8 +11,9 @@ import { grantEngagementCredits } from "@/lib/engagement";
  * public-only).
  */
 export async function toggleLike(projectId: string) {
-  const user = await getCurrentUser();
-  if (!user) return { error: "Unauthorized" as const };
+  const gate = await requireVerifiedUser();
+  if (!gate.ok) return { error: gate.error, code: gate.code };
+  const user = gate.user;
 
   const project = await prisma.songProject.findUnique({
     where: { id: projectId },

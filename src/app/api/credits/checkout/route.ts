@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/session";
+import { requireVerifiedUser, gateResponse } from "@/lib/session";
 import { getActiveBand } from "@/lib/band";
 import { isStripeConfigured, stripe, appUrl } from "@/lib/stripe";
 import { getPackage, creditsEnabled } from "@/lib/credits";
@@ -19,8 +19,9 @@ export async function POST(req: Request) {
     );
   }
 
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const gate = await requireVerifiedUser();
+  if (!gate.ok) return gateResponse(gate);
+  const user = gate.user;
 
   // Credits are purchased for the band the user is currently acting as.
   const active = await getActiveBand();

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { getCurrentUser } from "@/lib/session";
+import { requireVerifiedUser, gateResponse } from "@/lib/session";
 import { getMembership, canManageSongs } from "@/lib/band";
 import { prisma } from "@/lib/db";
 import { isR2Configured, r2, R2_BUCKET, publicUrlFor } from "@/lib/r2";
@@ -38,8 +38,12 @@ export async function POST(req: Request) {
     );
   }
 
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // Gate BOTH halves of the upload: this route hands out the R2 write, and
+  // createVersion commits the row. Gating only the commit would still let an
+  // unverified account burn unlimited storage on orphaned objects.
+  const gate = await requireVerifiedUser("RL_UPLOAD");
+  if (!gate.ok) return gateResponse(gate);
+  const user = gate.user;
 
   const body = await req.json().catch(() => ({}));
   const { kind, contentType, fileName } = body as {

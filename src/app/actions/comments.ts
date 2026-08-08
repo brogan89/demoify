@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/session";
+import { requireVerifiedUser } from "@/lib/session";
 import { getMembership, isMember, canManageSongs } from "@/lib/band";
 import { grantEngagementCredits } from "@/lib/engagement";
 
@@ -18,8 +18,9 @@ type AddCommentInput = {
 const MAX_TIMESTAMP_SECONDS = 86400; // 24h — a sane upper bound for any track.
 
 export async function addComment(input: AddCommentInput) {
-  const user = await getCurrentUser();
-  if (!user) return { error: "Unauthorized" };
+  const gate = await requireVerifiedUser();
+  if (!gate.ok) return { error: gate.error, code: gate.code };
+  const user = gate.user;
 
   const body = input.body.trim();
   if (!body) return { error: "Comment can't be empty" };
@@ -79,8 +80,9 @@ export async function addComment(input: AddCommentInput) {
 }
 
 export async function deleteComment(commentId: string) {
-  const user = await getCurrentUser();
-  if (!user) return { error: "Unauthorized" };
+  const gate = await requireVerifiedUser();
+  if (!gate.ok) return { error: gate.error, code: gate.code };
+  const user = gate.user;
 
   const comment = await prisma.comment.findUnique({
     where: { id: commentId },

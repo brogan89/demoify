@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/session";
+import { getCurrentUser, requireVerifiedUser } from "@/lib/session";
 import { getActiveBand } from "@/lib/band";
 import { isCurrentUserAdmin } from "@/lib/admin";
 import { creditsEnabled } from "@/lib/credits";
@@ -26,11 +26,14 @@ function isExhausted(maxRedemptions: number | null, redemptionCount: number): bo
  */
 export async function redeemCoupon(
   code: string,
-): Promise<{ ok: true; kind: "FREE_CREDITS"; credits: number } | { error: string }> {
+): Promise<
+  { ok: true; kind: "FREE_CREDITS"; credits: number } | { error: string; code?: string }
+> {
   if (!creditsEnabled()) return { error: "The credit economy is disabled on this instance." };
 
-  const user = await getCurrentUser();
-  if (!user) return { error: "Unauthorized" };
+  const gate = await requireVerifiedUser();
+  if (!gate.ok) return { error: gate.error, code: gate.code };
+  const user = gate.user;
 
   const active = await getActiveBand();
   if (!active) return { error: "No active band" };

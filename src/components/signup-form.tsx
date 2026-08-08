@@ -10,10 +10,13 @@ import { Label } from "@/components/ui/label";
 import { signUp } from "@/lib/auth-client";
 import { normalizeUsername } from "@/lib/username";
 import { checkUsernameAvailable } from "@/app/actions/account";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 
-export function SignupForm() {
+export function SignupForm({ turnstileSiteKey }: { turnstileSiteKey: string | null }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaReset, setCaptchaReset] = useState(0);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -28,6 +31,10 @@ export function SignupForm() {
     }
     if (password.length < 8) {
       toast.error("Password must be at least 8 characters");
+      return;
+    }
+    if (turnstileSiteKey && !captchaToken) {
+      toast.error("Please complete the bot check");
       return;
     }
 
@@ -47,10 +54,15 @@ export function SignupForm() {
       name: username,
       displayName: username,
       username,
+      // The captcha plugin reads the token from this header, not the body.
+      ...(captchaToken ? { fetchOptions: { headers: { "x-captcha-response": captchaToken } } } : {}),
     } as Parameters<typeof signUp.email>[0]);
     setBusy(false);
 
     if (error) {
+      // The token is spent either way — re-challenge before another attempt.
+      setCaptchaToken(null);
+      setCaptchaReset((n) => n + 1);
       toast.error(error.message ?? "Could not create account");
       return;
     }
@@ -86,6 +98,11 @@ export function SignupForm() {
         <Label htmlFor="password">Password</Label>
         <PasswordInput id="password" name="password" required minLength={8} />
       </div>
+      <TurnstileWidget
+        siteKey={turnstileSiteKey}
+        onToken={setCaptchaToken}
+        resetKey={captchaReset}
+      />
       <Button type="submit" disabled={busy} className="w-full">
         {busy ? "Creating…" : "Create account"}
       </Button>
