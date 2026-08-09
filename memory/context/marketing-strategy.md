@@ -151,9 +151,10 @@ Cheap hack: mint per-channel coupon codes (`HN100`, `PH100`, …) in the existin
 ## 6. First 30 days — Aug 7 → Sep 5, 2026
 
 **Week 1 (Fri Aug 7 – Thu Aug 13) — build the share loop, join the rooms**
-- [ ] BUILD: OG images + `metadataBase` · `sitemap.ts`/`robots.ts` · attribution + Cloudflare Web Analytics · email capture
+- [x] BUILD: OG images + `metadataBase` · `sitemap.ts`/`robots.ts` · attribution · email capture — **all shipped and live 2026-08-09** (PRs #12, #13). Still outstanding from this line: **Cloudflare Web Analytics** (a dashboard toggle, not code).
+  - Also shipped unplanned: `CREDITS_ENABLED="false"` (production had credits **on**, so "free" was false), email verification enforced, and Resend + Cloudflare Email Routing wired end to end.
 - [ ] DISTRIBUTE: warm Reddit accounts (genuine feedback, zero promo) · join IMF Discord · start X build-in-public · draft the 40-artist white-glove list (incl. 5–10 Hamilton/NZ bands) · publish BOFU article #1
-- [ ] DECIDE: credit posture at launch (disabled vs big subsidized balance) and make it visible in the UI · put up an own-work-only/DMCA page
+- [x] DECIDE: credit posture at launch — **disabled** (`CREDITS_ENABLED="false"`), credit UI hidden · own-work-only terms + DMCA page **live** at `/terms`, `/privacy`, `/dmca`. Legal copy is an unreviewed draft; `legal@demoify.app` needs a delivery test.
 
 **Week 2 (Aug 14–20) — seed wave 1, plant the slow channels**
 - [ ] BUILD: genre/subgenre SEO pages · per-channel coupon codes
