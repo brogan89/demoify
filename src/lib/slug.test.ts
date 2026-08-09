@@ -37,15 +37,40 @@ describe("slugify", () => {
     expect(slugify("a".repeat(100))).toBe("a".repeat(80));
   });
 
-  // Characterization, not endorsement: .slice(0, 80) runs AFTER the trailing-hyphen
-  // strip (src/lib/slug.ts:9-10), so a long title can truncate straight into a
-  // trailing hyphen — producing a slug that slugify itself would consider invalid.
-  // Locked in so a future reorder of those two lines is a deliberate change.
-  it("can truncate into a trailing hyphen that isValidSlug then rejects", () => {
+  // The 81st character being the separator used to slice a clean slug straight
+  // back into a trailing hyphen, because .slice(0, 80) ran after the edge strip.
+  it("truncates without slicing back into a trailing hyphen", () => {
     const slug = slugify(`${"a".repeat(79)} b`);
-    expect(slug).toHaveLength(80);
-    expect(slug.endsWith("-")).toBe(true);
-    expect(isValidSlug(slug)).toBe(false);
+    expect(slug).toBe("a".repeat(79));
+    expect(isValidSlug(slug)).toBe(true);
+  });
+
+  // The point of #9: slugify and isValidSlug must never disagree about what a
+  // valid slug is. "" is the one legal exception — uniqueSlug's `|| "song"`
+  // fallback (and its username equivalents) exist precisely to absorb it.
+  it("only ever emits an empty string or a value isValidSlug accepts", () => {
+    for (const input of [
+      "",
+      "!!!",
+      "🎵🎵",
+      "Привет",
+      "-".repeat(100),
+      " -x",
+      "Hello World",
+      "Crème Brûlée",
+      "foo---bar",
+      "-leading-and-trailing-",
+      "a".repeat(100),
+      `${"a".repeat(79)} b`, // 81st char is the separator
+      "a ".repeat(60), // separator lands on the 80-char boundary
+      `${"a".repeat(80)} b`,
+    ]) {
+      const out = slugify(input);
+      expect(
+        out === "" || isValidSlug(out),
+        `slugify(${JSON.stringify(input)}) → ${JSON.stringify(out)}`,
+      ).toBe(true);
+    }
   });
 });
 

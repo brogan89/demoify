@@ -6,8 +6,11 @@ export function slugify(input: string): string {
     .normalize("NFKD")
     .replace(/[̀-ͯ]/g, "") // strip diacritics
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80);
+    // Truncate BEFORE stripping edge hyphens — the other order slices a clean
+    // slug straight back into a trailing "-" when the 81st character is the
+    // separator, producing output isValidSlug rejects (#9).
+    .slice(0, 80)
+    .replace(/^-+|-+$/g, "");
 }
 
 /** True when a string is already a valid username/slug. */
