@@ -69,6 +69,21 @@
 		// secret is present — see src/lib/auth.ts).
 		"TURNSTILE_SITE_KEY": "",
 
+		// Outgoing mail identity. Not a secret — it's just an address, and having
+		// it in the repo documents which sender the app expects.
+		//
+		// The subdomain is deliberate. Resend needs SPF on whatever domain it
+		// sends from, and Cloudflare Email Routing owns the SPF record on the
+		// root (it handles INBOUND mail for legal@demoify.app). A domain may have
+		// only ONE SPF record, so putting both on the root means hand-merging two
+		// includes and silently breaking delivery if it's wrong. Sending from
+		// send.demoify.app gives Resend its own records and leaves the root
+		// untouched. It also isolates sending reputation.
+		//
+		// Must match a Resend-VERIFIED domain — src/lib/email.ts falls back to
+		// noreply@demoify.app if this is unset, which would not be verified.
+		"EMAIL_FROM": "Demoify <noreply@send.demoify.app>",
+
 		// Email-verification write-gate. Unset ⇒ ON in production, OFF in dev.
 		// Deliberately pinned to "false" for the FIRST deploy of this feature so
 		// migration 0016 (grandfathering) and the new UI ship inert; flip to
