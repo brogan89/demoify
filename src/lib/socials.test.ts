@@ -131,11 +131,11 @@ describe("cleanSocialLinks", () => {
   });
 
   it("rejects a value that can't parse as a URL, naming the platform", () => {
-    expect(cleanSocialLinks({ instagram: "javascript:alert(1)" })).toEqual({
-      error: "Instagram link isn't a valid URL",
-    });
     expect(cleanSocialLinks({ spotify: "not a url with spaces" })).toEqual({
       error: "Spotify link isn't a valid URL",
+    });
+    expect(cleanSocialLinks({ instagram: "https://" })).toEqual({
+      error: "Instagram link isn't a valid URL",
     });
   });
 
@@ -155,15 +155,36 @@ describe("cleanSocialLinks", () => {
     });
   });
 
-  // Characterization, not endorsement: src/lib/socials.ts:102 prepends "https://"
-  // to anything not already matching ^https?://, so a non-http scheme is rewritten
-  // into a syntactically-valid-but-nonsense URL rather than rejected. That also
-  // makes the explicit http(s) check at socials.ts:112-114 unreachable — no input
-  // can arrive there with a non-http protocol. Filed as a follow-up issue; this
-  // test pins today's behaviour so the fix is a visible change.
-  it("mangles a non-http scheme instead of rejecting it", () => {
+  it("rejects a non-http scheme rather than rewriting it", () => {
     expect(cleanSocialLinks({ website: "ftp://files.example.com" })).toEqual({
-      ok: { website: "https://ftp://files.example.com" },
+      error: "Website link must be http(s)",
+    });
+    expect(cleanSocialLinks({ website: "mailto:band@example.com" })).toEqual({
+      error: "Website link must be http(s)",
+    });
+  });
+
+  // "javascript:alert(1)" was already refused before the protocol check became
+  // reachable, but by the new URL catch rather than on purpose: "https://" used to
+  // be prepended, and "https://javascript:alert(1)" fails to parse because
+  // "alert(1)" isn't a valid port. Nothing is prepended now, so it parses cleanly
+  // as a javascript: URL and is turned away by the check written for it.
+  it("rejects a javascript: URL by protocol, not by a parse failure", () => {
+    expect(cleanSocialLinks({ instagram: "javascript:alert(1)" })).toEqual({
+      error: "Instagram link must be http(s)",
+    });
+  });
+
+  // Characterization: a bare host:port is indistinguishable from a scheme —
+  // "yourband.com" is itself a syntactically valid scheme name — so this parses as
+  // protocol "yourband.com:" and is rejected. Accepted tradeoff for making the
+  // protocol check reachable; the user's fix is to type the scheme.
+  it("rejects a bare host:port, which reads as a scheme", () => {
+    expect(cleanSocialLinks({ website: "yourband.com:8080" })).toEqual({
+      error: "Website link must be http(s)",
+    });
+    expect(cleanSocialLinks({ website: "https://yourband.com:8080" })).toEqual({
+      ok: { website: "https://yourband.com:8080" },
     });
   });
 });

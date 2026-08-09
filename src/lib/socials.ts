@@ -87,9 +87,10 @@ export function parseSocialLinks(json: string | null | undefined): SocialLinkMap
 const MAX_URL_LENGTH = 200;
 
 /**
- * Validate/normalize a links map for storage: known keys only, trimmed, scheme
- * prepended if missing, must be a valid http(s) URL within the length cap. Blank
- * values are dropped (so clearing a field removes the link).
+ * Validate/normalize a links map for storage: known keys only, trimmed, "https://"
+ * prepended when the value carries no scheme at all, must be a valid http(s) URL
+ * within the length cap. A value that already has some other scheme is rejected,
+ * not rewritten. Blank values are dropped (so clearing a field removes the link).
  */
 export function cleanSocialLinks(
   input: SocialLinkMap,
@@ -99,7 +100,13 @@ export function cleanSocialLinks(
     if (!SOCIAL_KEYS.has(key)) continue;
     const trimmed = (rawValue ?? "").trim();
     if (!trimmed) continue;
-    const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    // Prepend a scheme only when there isn't one at all. Testing for http(s)
+    // specifically would rewrite "ftp://files.example.com" into the nonsense
+    // "https://ftp://files.example.com" and make the protocol check below
+    // unreachable; matching the scheme grammar instead — ALPHA *( ALPHA / DIGIT /
+    // "+" / "-" / "." ) — lets any other scheme fall through and be rejected.
+    const hasScheme = /^[a-z][a-z0-9+.-]*:/i.test(trimmed);
+    const withScheme = hasScheme ? trimmed : `https://${trimmed}`;
     if (withScheme.length > MAX_URL_LENGTH) {
       return { error: `${PLATFORMS_BY_KEY.get(key)?.label ?? key} link is too long` };
     }
