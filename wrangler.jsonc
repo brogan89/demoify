@@ -85,11 +85,17 @@
 		"EMAIL_FROM": "Demoify <noreply@send.demoify.app>",
 
 		// Email-verification write-gate. Unset ⇒ ON in production, OFF in dev.
-		// Deliberately pinned to "false" for the FIRST deploy of this feature so
-		// migration 0016 (grandfathering) and the new UI ship inert; flip to
-		// "true" in a follow-up deploy to actually enforce. Flipping back is the
-		// rollback — there is no data migration to undo.
-		"REQUIRE_EMAIL_VERIFICATION": "false",
+		// Migration 0016 (grandfathering) shipped inert in d18b938; this is the
+		// follow-up deploy that actually enforces. Flipping back to "false" is
+		// the rollback — there is no data migration to undo.
+		//
+		// HARD PRECONDITION: RESEND_API_KEY must be set as a Worker secret before
+		// this deploys. The gate deliberately fails CLOSED when email is
+		// unconfigured (see warnIfUndeliverable in src/lib/verification.ts) — so
+		// with no Resend key, new signups are held read-only AND never receive a
+		// verification email. That is unrecoverable for the user, not a warning.
+		// Verify with: npx wrangler secret list | grep RESEND_API_KEY
+		"REQUIRE_EMAIL_VERIFICATION": "true",
 
 		// Credit economy. Unset ⇒ ON (src/lib/credits.ts reads `!== "false"`), so
 		// this must be pinned, not omitted: the Sep 2026 launch is free and the
