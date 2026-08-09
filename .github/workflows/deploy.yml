@@ -99,9 +99,17 @@ jobs:
         # back to its default secret while collecting page data. The worker's
         # runtime copy is set separately via `wrangler secret put` (see DEPLOYMENT.md).
         # NEXT_PUBLIC_APP_VERSION is inlined into the bundle and shown in the footer.
+        #
+        # NEXT_PUBLIC_APP_URL must be set HERE, not only in wrangler.jsonc: those
+        # are runtime Worker vars, and `metadataBase` is resolved at BUILD time
+        # for every statically rendered page (/terms, /privacy, /dmca). Without
+        # it those pages bake og:url and og:image as http://localhost:3000 and
+        # every social card silently breaks. Being NEXT_PUBLIC_*, it is inlined
+        # into the bundle, so it also covers the runtime paths.
         env:
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           NEXT_PUBLIC_APP_VERSION: ${{ steps.version.outputs.version }}
+          NEXT_PUBLIC_APP_URL: https://demoify.app
         run: npm run deploy
 
       # Tag the deployed commit with the same version now that the deploy succeeded.

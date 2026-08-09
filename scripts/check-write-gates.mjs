@@ -43,6 +43,17 @@ const EXEMPT = {
   "bands.ts": {
     setActiveBand: "writes a cookie preference only, no user data",
   },
+  "attribution.ts": {
+    captureRefSource:
+      "writes the first-touch channel cookie only, no user data, and must run " +
+      "pre-signup by definition. Rate-limited via RL_PUBLIC. Same basis as setActiveBand.",
+  },
+  "subscribers.ts": {
+    subscribeToLaunchUpdates:
+      "pre-signup email capture — the callers are by definition logged out, so " +
+      "the gate cannot apply. Defends itself instead: RL_PUBLIC keyed by IP, " +
+      "format + length validation, and a single row in an unrelated table.",
+  },
 };
 
 /** Route handlers that must call the gate, mapped to the symbol they need. */

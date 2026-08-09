@@ -12,6 +12,7 @@
 
 import { prisma } from "@/lib/db";
 import { isCurrentUserAdmin } from "@/lib/admin";
+import { UNTAGGED_SOURCE } from "@/lib/attribution";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -60,11 +61,22 @@ export type AnalyticsSnapshot = {
   totalRevenueCents: number;
   /** MRR estimate: revenue from past 30 days * 12 / 365 * 30 (smoothed). */
   estimatedMmrCents: number;
+  /** Launch-updates email list size. Pre-launch target is 100+. */
+  emailSubscribers: number;
 };
 
 export type TimeSeriesEntry = {
   date: string; // "YYYY-MM-DD"
   value: number;
+};
+
+/** One row of the launch-week channel ranking. */
+export type SignupSourceEntry = {
+  /** Normalized channel tag, or the untagged bucket's label. */
+  source: string;
+  count: number;
+  /** Share of signups in the window, 0–100, rounded to one decimal. */
+  share: number;
 };
 
 export type AnalyticsData = {
@@ -75,6 +87,7 @@ export type AnalyticsData = {
   commentsOverTime: TimeSeriesEntry[];
   revenueOverTime: TimeSeriesEntry[];
   topSongs: { id: string; title: string; artist: string; playCount: number }[];
+  signupsBySource: SignupSourceEntry[];
   recentActivity: {
     type: "signup" | "upload" | "tip" | "purchase";
     label: string;
@@ -108,6 +121,7 @@ export async function getSnapshot(days: number = 30): Promise<AnalyticsSnapshot>
     recentCreditTx,
     creditBalance,
     activeSessions,
+    emailSubscribers,
   ] = await Promise.all([
     // Total users
     prisma.user.count(),
@@ -157,6 +171,8 @@ export async function getSnapshot(days: number = 30): Promise<AnalyticsSnapshot>
     prisma.session.count({
       where: { createdAt: { gte: since } },
     }),
+    // Launch-updates list — lifetime, not windowed: the target is a total.
+    prisma.emailSubscriber.count(),
   ]);
 
   const totalPlays = topPlaysResult._sum.playCount ?? 0;
@@ -199,6 +215,7 @@ export async function getSnapshot(days: number = 30): Promise<AnalyticsSnapshot>
     totalCreditsInCirculation: creditBalance._sum?.credits ?? 0,
     totalRevenueCents: totalTipFeeCents + totalCreditRevenueCents,
     estimatedMmrCents,
+    emailSubscribers,
   };
 }
 
@@ -323,6 +340,40 @@ export async function getRevenueOverTime(days: number = 30): Promise<TimeSeriesE
   return range.map((date) => ({ date, value: Math.round(buckets.get(date) ?? 0) }));
 }
 
+/**
+ * Signups grouped by first-touch channel — the launch plan's fourth metric, and
+ * the input to the "pick ONE channel to double down on" retro.
+ *
+ * Untagged signups are surfaced as their own row rather than dropped: a large
+ * untagged bucket is the signal that the tagged links aren't being used, which
+ * is exactly the failure this metric exists to catch.
+ *
+ * findMany + reduce rather than groupBy, matching the rest of this file — the
+ * user table is small and the aggregate has to be reshaped in JS anyway.
+ */
+export async function getSignupsBySource(days: number = 30): Promise<SignupSourceEntry[]> {
+  const since = new Date(Date.now() - days * 86400_000);
+  const users = await prisma.user.findMany({
+    select: { refSource: true },
+    where: { createdAt: { gte: since } },
+  });
+
+  const counts = new Map<string, number>();
+  for (const u of users) {
+    const key = u.refSource ?? UNTAGGED_SOURCE;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+
+  const total = users.length;
+  return [...counts.entries()]
+    .map(([source, count]) => ({
+      source,
+      count,
+      share: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
+    }))
+    .sort((a, b) => b.count - a.count || a.source.localeCompare(b.source));
+}
+
 export async function getTopSongs(limit: number = 10): Promise<{ id: string; title: string; artist: string; playCount: number }[]> {
   const songs = await prisma.songProject.findMany({
     orderBy: { playCount: "desc" },
@@ -376,7 +427,7 @@ export async function getRecentActivity(limit: number = 20): Promise<AnalyticsDa
 // ---------------------------------------------------------------------------
 
 export async function getAnalyticsData(days: number = 30): Promise<AnalyticsData> {
-  const [snapshot, signupsOverTime, uploadsOverTime, playsOverTime, commentsOverTime, revenueOverTime, topSongs, recentActivity] =
+  const [snapshot, signupsOverTime, uploadsOverTime, playsOverTime, commentsOverTime, revenueOverTime, topSongs, signupsBySource, recentActivity] =
     await Promise.all([
       getSnapshot(days),
       getSignupsOverTime(days),
@@ -385,6 +436,7 @@ export async function getAnalyticsData(days: number = 30): Promise<AnalyticsData
       getCommentsOverTime(days),
       getRevenueOverTime(days),
       getTopSongs(),
+      getSignupsBySource(days),
       getRecentActivity(),
     ]);
 
@@ -396,6 +448,7 @@ export async function getAnalyticsData(days: number = 30): Promise<AnalyticsData
     commentsOverTime,
     revenueOverTime,
     topSongs,
+    signupsBySource,
     recentActivity,
   };
 }

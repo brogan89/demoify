@@ -22,6 +22,7 @@ import {
 } from "@/lib/upload";
 import { createProject } from "@/app/actions/projects";
 import { createVersion } from "@/app/actions/versions";
+import type { PresignError, PresignSuccess } from "@/lib/upload-api";
 
 export function CreateSongForm({
   uploadsEnabled,
@@ -88,12 +89,12 @@ export function CreateSongForm({
             body: JSON.stringify({ projectId, contentType, fileName: file.name }),
           });
           if (!presignRes.ok) {
-            const { error } = await presignRes
+            const { error } = (await presignRes
               .json()
-              .catch(() => ({ error: "Upload failed" }));
+              .catch(() => ({ error: "Upload failed" }))) as PresignError;
             throw new Error(error ?? "Could not start upload");
           }
-          const { uploadUrl, publicUrl } = await presignRes.json();
+          const { uploadUrl, publicUrl } = (await presignRes.json()) as PresignSuccess;
 
           await putToPresigned(uploadUrl, file, setProgress);
 

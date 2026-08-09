@@ -1,6 +1,8 @@
+import { cookies } from "next/headers";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { captcha } from "better-auth/plugins";
+import { REF_COOKIE, normalizeRefSource } from "@/lib/attribution";
 import { prisma } from "@/lib/db";
 import { uniqueUserUsername } from "@/lib/username";
 import { sendEmail, actionEmail } from "@/lib/email";
@@ -32,6 +34,24 @@ const captchaPlugins = process.env.TURNSTILE_SECRET_KEY
       }),
     ]
   : [];
+
+/**
+ * The first-touch channel tag for the signup in flight, or null.
+ *
+ * Set by src/proxy.ts when the visitor landed on a tagged link. Deliberately
+ * fail-soft: attribution is a reporting nicety and signup is not, so a missing
+ * request scope or an unreadable cookie must cost us the tag, never the
+ * account. Re-normalized on the way out — the cookie is client-visible storage
+ * even though it is httpOnly, and this value goes straight into the database.
+ */
+async function refSourceFromCookie(): Promise<string | null> {
+  try {
+    const store = await cookies();
+    return normalizeRefSource(store.get(REF_COOKIE)?.value);
+  } catch {
+    return null;
+  }
+}
 
 // Only enable a social provider when its credentials are present.
 const socialProviders: Record<string, { clientId: string; clientSecret: string }> = {};
@@ -101,6 +121,12 @@ export const auth = betterAuth({
       username: { type: "string", required: false, input: true },
       displayName: { type: "string", required: false, input: true },
       avatarUrl: { type: "string", required: false, input: true },
+      // Acquisition channel, filled from the demoify_ref cookie in the create
+      // hook below. `input: false` is the point: declaring it keeps the field
+      // in Better Auth's user schema so the adapter persists it, while refusing
+      // it from the signup payload — otherwise anyone could POST their own
+      // refSource and the channel ranking would be a suggestion box.
+      refSource: { type: "string", required: false, input: false },
     },
     changeEmail: {
       enabled: true,
@@ -160,6 +186,8 @@ export const auth = betterAuth({
               username,
               displayName: u.displayName || u.username || u.name || username,
               avatarUrl: u.avatarUrl ?? u.image ?? null,
+              // First touch only: written once here, never updated afterwards.
+              refSource: await refSourceFromCookie(),
             },
           };
         },

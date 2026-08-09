@@ -12,6 +12,8 @@ import { PlayerBar } from "@/components/player/player-bar";
 import { ErrorMonitor } from "@/components/error-monitor";
 import { DevDbPullButton } from "@/components/dev/dev-db-pull-button";
 import { DevViewportToggle } from "@/components/dev/dev-viewport-toggle";
+import { siteUrl } from "@/lib/site";
+import { AttributionCapture } from "@/components/attribution-capture";
 
 // Only under plain `npm run dev` — never in production or `dev:remote` (which
 // reads the remote DB, so there's nothing local to populate).
@@ -44,10 +46,32 @@ export const viewport: Viewport = {
   ],
 };
 
+const DESCRIPTION =
+  "The permanent link for a song in progress. Push new versions without breaking the link, and collect feedback anchored to the exact version.";
+
 export const metadata: Metadata = {
-  title: "Demoify — Share music, get feedback",
-  description:
-    "The simple way for artists and producers to share tracks with one link and collect feedback in the comments.",
+  // Without metadataBase, every relative OG/Twitter image URL — including the
+  // ones the opengraph-image.tsx file convention generates — resolves against
+  // localhost and social cards render blank. The whole product is "one link you
+  // can share", so this is load-bearing, not polish.
+  metadataBase: siteUrl(),
+  title: {
+    default: "Demoify — Share music, get feedback",
+    template: "%s · Demoify",
+  },
+  description: DESCRIPTION,
+  openGraph: {
+    type: "website",
+    siteName: "Demoify",
+    title: "Demoify — Share music, get feedback",
+    description: DESCRIPTION,
+    url: "/",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Demoify — Share music, get feedback",
+    description: DESCRIPTION,
+  },
 };
 
 export default function RootLayout({
@@ -63,6 +87,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <ErrorMonitor />
+        <AttributionCapture />
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <PlayerProvider>
             <SiteHeader />

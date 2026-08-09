@@ -12,6 +12,7 @@ import {
   putToPresigned,
 } from "@/lib/upload";
 import { setSongArtwork } from "@/app/actions/projects";
+import type { PresignError, PresignSuccess } from "@/lib/upload-api";
 
 /**
  * Cover-art editor for the song dashboard: upload/replace the artwork or remove
@@ -58,10 +59,12 @@ export function SongArtworkEditor({
         body: JSON.stringify({ kind: "artwork", projectId, contentType, fileName: file.name }),
       });
       if (!presignRes.ok) {
-        const { error } = await presignRes.json().catch(() => ({ error: "Upload failed" }));
+        const { error } = (await presignRes
+          .json()
+          .catch(() => ({ error: "Upload failed" }))) as PresignError;
         throw new Error(error ?? "Could not start upload");
       }
-      const { uploadUrl, publicUrl } = await presignRes.json();
+      const { uploadUrl, publicUrl } = (await presignRes.json()) as PresignSuccess;
       await putToPresigned(uploadUrl, file, setProgress);
 
       const res = await setSongArtwork(projectId, publicUrl);

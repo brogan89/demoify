@@ -18,6 +18,7 @@ import { SongFeed } from "@/components/song-feed";
 import { type SongCardData } from "@/components/song-card";
 import { ArtTile, Equalizer } from "@/components/art-tile";
 import { Reveal } from "@/components/reveal";
+import { LaunchUpdatesForm } from "@/components/launch-updates-form";
 
 // The product's three pillars, presented as the loop they actually form:
 // share a link → collect feedback → upload the next version, same link.
@@ -393,6 +394,18 @@ export default async function Home() {
           >
             <Link href={user ? "/dashboard" : "/signup"}>Get started</Link>
           </Button>
+
+          {/* Not-yet-ready path. Signed-in users already have an account and an
+              address on file, so this would just be noise for them. */}
+          {!user && (
+            <div className="mt-12 border-t pt-8">
+              <p className="mb-4 text-sm text-muted-foreground">
+                Not ready yet? Leave your email and we&rsquo;ll tell you when it&rsquo;s worth
+                a look.
+              </p>
+              <LaunchUpdatesForm />
+            </div>
+          )}
         </Reveal>
       </section>
 

@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { sleeveGradient } from "@/components/art-tile";
 
 export const metadata: Metadata = {
-  title: "Artists · Demoify",
+  title: "Artists",
   description: "Find bands and artists on Demoify.",
 };
 

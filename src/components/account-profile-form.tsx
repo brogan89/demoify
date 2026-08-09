@@ -14,6 +14,7 @@ import {
   putToPresigned,
 } from "@/lib/upload";
 import { updateAccountProfile } from "@/app/actions/account";
+import type { PresignError, PresignSuccess } from "@/lib/upload-api";
 
 function initials(name: string): string {
   return name.slice(0, 2).toUpperCase();
@@ -53,10 +54,12 @@ export function AccountProfileForm({
         body: JSON.stringify({ kind: "avatar", contentType, fileName: file.name }),
       });
       if (!presignRes.ok) {
-        const { error } = await presignRes.json().catch(() => ({ error: "Upload failed" }));
+        const { error } = (await presignRes
+          .json()
+          .catch(() => ({ error: "Upload failed" }))) as PresignError;
         throw new Error(error ?? "Could not start upload");
       }
-      const { uploadUrl, publicUrl } = await presignRes.json();
+      const { uploadUrl, publicUrl } = (await presignRes.json()) as PresignSuccess;
       await putToPresigned(uploadUrl, file);
 
       const res = await updateAccountProfile({ avatarUrl: publicUrl });

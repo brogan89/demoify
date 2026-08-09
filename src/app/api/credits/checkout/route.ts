@@ -27,7 +27,10 @@ export async function POST(req: Request) {
   const active = await getActiveBand();
   if (!active) return NextResponse.json({ error: "No active band" }, { status: 400 });
 
-  const { packageId, couponCode } = await req.json().catch(() => ({}));
+  const { packageId, couponCode } = (await req.json().catch(() => ({}))) as {
+    packageId?: string;
+    couponCode?: string;
+  };
   const pack = getPackage(packageId);
   if (!pack) return NextResponse.json({ error: "Unknown package" }, { status: 400 });
 

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, TrendingUp, Users, Music, CreditCard, Play, MessageSquare, Heart } from "lucide-react";
+import { ArrowLeft, TrendingUp, Users, Music, CreditCard, Play, Heart, Radio, Mail } from "lucide-react";
+import { type SignupSourceEntry } from "@/lib/analytics";
+import { UNTAGGED_SOURCE } from "@/lib/attribution";
 import { isCurrentUserAdmin } from "@/lib/admin";
 import { getAnalyticsData, type AnalyticsData } from "@/lib/analytics";
 
@@ -83,6 +85,12 @@ export default async function AnalyticsPage() {
               label="Credits in Circulation"
               value={data.snapshot.totalCreditsInCirculation.toLocaleString()}
             />
+            <StatCard
+              icon={<Mail className="size-4" />}
+              label="Launch email list"
+              value={data.snapshot.emailSubscribers.toLocaleString()}
+              detail="target 100+ before launch"
+            />
           </div>
 
           {/* Charts */}
@@ -92,6 +100,11 @@ export default async function AnalyticsPage() {
             <ChartCard title="Plays (engagement)" data={data.playsOverTime} color="#a855f7" unit="plays" />
             <ChartCard title="Comments" data={data.commentsOverTime} color="#f59e0b" unit="comments" />
             <ChartCard title="Revenue (cents)" data={data.revenueOverTime} color="#10b981" unit="cents" />
+          </div>
+
+          {/* Channel ranking — the launch plan's "signups by source" metric. */}
+          <div className="mb-8">
+            <SignupSourceCard sources={data.signupsBySource} />
           </div>
 
           {/* Top songs & Recent activity */}
@@ -212,6 +225,65 @@ function TopSongsCard({
               </div>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Signups by source — the launch-week channel ranking
+// ---------------------------------------------------------------------------
+
+function SignupSourceCard({ sources }: { sources: SignupSourceEntry[] }) {
+  const total = sources.reduce((sum, s) => sum + s.count, 0);
+  // Scale bars against the biggest channel, not against the total — with one
+  // dominant channel every other bar would round to invisible.
+  const max = Math.max(...sources.map((s) => s.count), 1);
+
+  return (
+    <div className="rounded-lg border p-4">
+      <div className="mb-1 flex items-center gap-2">
+        <Radio className="size-4 text-muted-foreground" />
+        <h3 className="text-sm font-medium">Signups by source</h3>
+      </div>
+      <p className="mb-3 text-xs text-muted-foreground">
+        First touch, from <code>?ref=</code> / <code>utm_source</code> on the landing URL.
+      </p>
+
+      {total === 0 ? (
+        <p className="py-6 text-center text-xs text-muted-foreground">
+          No signups in this period
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {sources.map((s) => {
+            const untagged = s.source === UNTAGGED_SOURCE;
+            return (
+              <div key={s.source} className="flex items-center gap-3">
+                <span
+                  className={`w-48 shrink-0 truncate font-mono text-xs ${
+                    untagged ? "text-muted-foreground italic" : ""
+                  }`}
+                  title={s.source}
+                >
+                  {s.source}
+                </span>
+                <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className={`h-full rounded-full ${
+                      untagged ? "bg-muted-foreground/40" : "bg-brand-gradient"
+                    }`}
+                    style={{ width: `${(s.count / max) * 100}%` }}
+                  />
+                </div>
+                <span className="w-24 shrink-0 text-right text-xs tabular-nums">
+                  {s.count.toLocaleString()}{" "}
+                  <span className="text-muted-foreground">({s.share}%)</span>
+                </span>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

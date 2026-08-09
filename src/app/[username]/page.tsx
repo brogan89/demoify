@@ -30,10 +30,20 @@ export async function generateMetadata({
     where: { username },
     select: { displayName: true, bio: true },
   });
-  if (!band) return { title: "Not found — Demoify" };
+  if (!band) return { title: "Not found" };
+  // Bare title — the root layout's `%s · Demoify` template adds the suffix.
+  const description = band.bio ?? `Listen to ${band.displayName} on Demoify.`;
   return {
-    title: `${band.displayName} · Demoify`,
-    description: band.bio ?? `Listen to ${band.displayName} on Demoify.`,
+    title: band.displayName,
+    description,
+    alternates: { canonical: `/${username}` },
+    openGraph: {
+      type: "profile",
+      title: band.displayName,
+      description,
+      url: `/${username}`,
+    },
+    twitter: { card: "summary_large_image", title: band.displayName, description },
   };
 }
 

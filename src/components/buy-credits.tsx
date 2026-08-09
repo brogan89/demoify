@@ -96,8 +96,10 @@ export function BuyCredits({
           ...(appliedDiscount ? { couponCode: appliedDiscount.code } : {}),
         }),
       });
-      const data = await res.json();
+      const data = (await res.json()) as { url?: string; error?: string };
       if (!res.ok) throw new Error(data.error ?? "Could not start checkout");
+      // A 200 with no url would otherwise navigate to the string "undefined".
+      if (!data.url) throw new Error("Checkout did not return a redirect URL");
       window.location.assign(data.url); // hand off to Stripe Checkout
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Checkout failed");

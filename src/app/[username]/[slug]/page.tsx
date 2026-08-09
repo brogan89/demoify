@@ -49,13 +49,22 @@ export async function generateMetadata({
   const { username, slug } = await params;
   const project = await getProject(username, slug);
   if (!project || project.visibility === "PRIVATE") {
-    return { title: "Not found — Demoify" };
+    // Private songs get no real metadata — the title alone would leak what the
+    // owner chose not to publish. The colocated opengraph-image.tsx makes the
+    // same check.
+    return { title: "Not found", robots: { index: false, follow: false } };
   }
   const title = `${project.title} — ${project.band.displayName}`;
+  const description =
+    project.description ?? `Listen to ${project.title} by ${project.band.displayName} on Demoify.`;
+  const path = `/${username}/${slug}`;
   return {
-    title: `${title} · Demoify`,
-    description: project.description ?? `Listen to ${project.title} on Demoify.`,
-    openGraph: { title, description: project.description ?? undefined },
+    // Bare title — the root layout's `%s · Demoify` template adds the suffix.
+    title,
+    description,
+    alternates: { canonical: path },
+    openGraph: { type: "music.song", title, description, url: path },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 
