@@ -10,15 +10,21 @@ with the pain.
 
 ## Pre-flight — do not post until these clear
 
-All five verified missing/unconfirmed at HEAD `830dfa3` on 2026-08-09.
+All five were missing/unconfirmed at HEAD `830dfa3` on 2026-08-09. Blockers 1–4 are **built but
+not yet live** — they sit in PR #12 (`launch-preconditions`) and only count as cleared once that
+is merged and deployed.
 
-| # | Blocker | Check |
-|---|---|---|
-| 1 | **No terms / privacy / DMCA page** — nothing under `src/app` matches `*terms*`, `*privacy*`, `*dmca*`. Strategy assumption #5, now confirmed. | `demoify.app/terms` loads an own-work-only rights page with a DMCA contact |
-| 2 | **No OG images / `metadataBase`** — Reddit will render a bare grey card. Strategy 2a #1: *"Do before ANY outreach."* | `grep -rn "metadataBase" src/` hits, and a song URL unfurls with artwork in Discord |
-| 3 | **No `?ref`/UTM capture** in `src/lib/analytics.ts`. Kills the "signups by source" metric and the Sep 5 retro decision. | A signup via `?ref=reddit_musicproduction` shows that source in `/admin/analytics` |
-| 4 | **Production `CREDITS_ENABLED` unconfirmed** — defaults to `true`. Every draft below says "free right now." | Confirmed `false` in prod; upload UI shows no credit cost |
-| 5 | **Launch gate: ≥100 real tracks in Explore by Aug 27**, else slip a week. | Explore shows ≥100 tracks from outside accounts |
+| # | Blocker | Status | Check |
+|---|---|---|---|
+| 1 | **No terms / privacy / DMCA page.** Strategy assumption #5, confirmed absent. | Built in #12 — pages exist, **legal copy still needs a human read**, and `legal@demoify.app` must actually receive mail | `demoify.app/terms` loads and the DMCA address resolves |
+| 2 | **No OG images / `metadataBase`** — Reddit renders a bare grey card. Strategy 2a #1. | Built in #12, verified rendering in workerd | A song URL unfurls with artwork in Discord |
+| 3 | **No `?ref`/UTM capture** — kills the "signups by source" metric and the Sep 5 retro. | Built in #12, verified end-to-end | A signup via `?ref=reddit_musicproduction` shows that source in `/admin/analytics` |
+| 4 | **`CREDITS_ENABLED` unset ⇒ credits were ON in production** — uploads cost 10 credits, so "free right now" was false. | Pinned `"false"` in #12 | Upload UI shows no credit cost on demoify.app |
+| 5 | **Launch gate: ≥100 real tracks in Explore by Aug 27**, else slip a week. | **Not started** — this one is seeding work, not code | Explore shows ≥100 tracks from outside accounts |
+
+One more, not on the original list: `REQUIRE_EMAIL_VERIFICATION` is still pinned `"false"` in
+production, so the unverified-account write gate is inert. Going public with it off means
+throwaway accounts can post comments. Worth flipping before the music subs.
 
 **Independent of all of the above — start now.** The Week-1 task *"warm Reddit accounts (genuine
 feedback, zero promo)"* hasn't begun. Three weeks of real commenting in these subs is what makes a
