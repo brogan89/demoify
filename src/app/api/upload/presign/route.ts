@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { PresignRequest } from "@/lib/upload-api";
 import { randomUUID } from "crypto";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -45,12 +46,8 @@ export async function POST(req: Request) {
   if (!gate.ok) return gateResponse(gate);
   const user = gate.user;
 
-  const body = await req.json().catch(() => ({}));
-  const { kind, contentType, fileName } = body as {
-    kind?: "song" | "logo" | "avatar" | "artwork";
-    contentType?: string;
-    fileName?: string;
-  };
+  const body = (await req.json().catch(() => ({}))) as PresignRequest;
+  const { kind, contentType, fileName } = body;
   if (!contentType || !fileName) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }

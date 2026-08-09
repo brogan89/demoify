@@ -17,6 +17,7 @@ import {
 import { SOCIAL_PLATFORMS, type SocialLinkMap } from "@/lib/socials";
 import { SocialIcon } from "@/components/social-links";
 import { updateArtistProfile } from "@/app/actions/bands";
+import type { PresignError, PresignSuccess } from "@/lib/upload-api";
 
 function initials(name: string): string {
   return name.slice(0, 2).toUpperCase();
@@ -64,10 +65,12 @@ export function EditArtistProfile({
         body: JSON.stringify({ kind: "logo", bandId, contentType, fileName: file.name }),
       });
       if (!presignRes.ok) {
-        const { error } = await presignRes.json().catch(() => ({ error: "Upload failed" }));
+        const { error } = (await presignRes
+          .json()
+          .catch(() => ({ error: "Upload failed" }))) as PresignError;
         throw new Error(error ?? "Could not start upload");
       }
-      const { uploadUrl, publicUrl } = await presignRes.json();
+      const { uploadUrl, publicUrl } = (await presignRes.json()) as PresignSuccess;
       await putToPresigned(uploadUrl, file);
 
       const res = await updateArtistProfile({ bandId, avatarUrl: publicUrl });

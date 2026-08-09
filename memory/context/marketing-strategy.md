@@ -162,12 +162,15 @@ Cheap hack: mint per-channel coupon codes (`HN100`, `PH100`, …) in the existin
 **Week 3 (Aug 21–27) — seed wave 2, stage the launch**
 - [ ] BUILD: embeddable player only if weeks 1–2 are fully done; otherwise polish + bug bash
 - [ ] DISTRIBUTE: wave 2 → 30–40 artists / 100–150 tracks cumulative · founder comments on every seeded track (model the feedback culture) · write + peer-review the Show HN post, PH assets, and 3 subreddit posts (each native to its sub) · line up friendly early users to be present on launch days
+  - Subreddit posts **drafted 2026-08-09** → [`reddit-launch-posts.md`](reddit-launch-posts.md): five native drafts (r/selfhosted, r/SideProject+r/opensource, r/musicproduction, r/homerecording, r/WeAreTheMusicMakers), the tiered sub shortlist, and a comment reply bank. Still needs the peer-review pass.
 - [ ] **LAUNCH GATE: ≥100 real tracks in Explore by Thu Aug 27, else slip one week. Never launch an empty feed.**
 
 **Week 4 (Aug 28 – Sep 5) — staggered launch** *(weekend Aug 28–31 = final prep + rest)*
 - [ ] **Tue Sep 1: Show HN** + Indie Hackers + dev.to architecture post (builder story). Post ~11pm–midnight NZT = 7–8am ET Tuesday, then work the thread overnight NZ time.
 - [ ] **Wed Sep 2: Product Hunt** at 12:01am PT — that's **7:01pm Wednesday NZT**, conveniently a NZ evening — + launch email to the captured list + X thread.
-- [ ] **Thu–Fri Sep 3–4:** music subreddits (feedback-first framing) + IMF Discord.
+- [ ] **Wed Sep 2 (also):** r/selfhosted post. *Deviation from §2b, which bundles r/selfhosted into the week-2 submissions — the long review queues are the awesome-selfhosted PR / AlternativeTo / OpenSourceAlternative listings, which still go week 2. The subreddit post is a launch beat, and lands better next to PH than two weeks early against an unseeded Explore.*
+- [ ] **Thu–Fri Sep 3–4:** music subreddits (feedback-first framing) + IMF Discord. Specifically **r/musicproduction Thu**, **r/homerecording Fri** (added to the §2b list — its core activity is bounce → send → get notes), plus r/SideProject + r/opensource Fri. **r/WeAreTheMusicMakers slips to Mon Sep 7** — biggest and strictest, so it goes after the framing is proven. Do **not** post the tool to r/IndieMusicFeedback: the culture fits but it's a sub for song feedback, not tool launches — participate + Discord, and ask the mods first.
+- [ ] Drip Tier 2 after launch week, one per ~3 days: r/edmproduction (Sep 10), r/Songwriting (Sep 14), r/mixingmastering (Sep 17), r/makinghiphop (Sep 21).
 - [ ] All week: <2h response time on every comment and thread.
 - [ ] **Fri Sep 5: retro** — signups by source, activation %, pick ONE channel to double down on in month 2.
 
@@ -179,7 +182,7 @@ Cheap hack: mint per-channel coupon codes (`HN100`, `PH100`, …) in the existin
 2. **Seeding assumes ~40 artist yeses in 2 weeks** — the concierge-upload offer is the mitigation; the Aug 27 launch gate (slip a week) is the fallback.
 3. **Reddit is the highest-expected-value channel AND the easiest place to get banned** — 90/10 rule, per-sub rules read before every post.
 4. **Federation is a story, not a demo** — zero external instances exist today; pitch it as direction, never fake usage.
-5. **Rights/moderation posture** (own-work-only terms + DMCA contact) must exist before any public push — not yet verified to exist in-app.
+5. **Rights/moderation posture** (own-work-only terms + DMCA contact) must exist before any public push — **confirmed missing as of 2026-08-09** (nothing under `src/app` matches `*terms*`/`*privacy*`/`*dmca*`). This is now a hard blocker on the music-subreddit posts specifically: *"do you claim rights to my music?"* is the predictable top reply and there is no page to link.
 6. **Founder capacity ~15–20 hrs/wk** on marketing alongside dev. If capacity halves: cut content (2c) before community (2b), and never cut the seeding.
 7. **ICP is inherited from the July deck**, validated so far only by intuition — the week-2/3 white-glove conversations double as the validation interviews.
 

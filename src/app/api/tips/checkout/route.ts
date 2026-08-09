@@ -26,8 +26,12 @@ export async function POST(req: Request) {
     amountCents,
     projectId,
     returnPath,
-  }: { bandId?: string; amountCents?: number; projectId?: string; returnPath?: string } =
-    await req.json().catch(() => ({}));
+  } = (await req.json().catch(() => ({}))) as {
+    bandId?: string;
+    amountCents?: number;
+    projectId?: string;
+    returnPath?: string;
+  };
 
   if (!bandId || typeof amountCents !== "number" || !isValidTipAmount(amountCents)) {
     return NextResponse.json({ error: "Invalid tip" }, { status: 400 });

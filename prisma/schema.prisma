@@ -34,6 +34,12 @@ model User {
   displayName String
   avatarUrl   String?
 
+  // First-touch acquisition channel ("reddit_musicproduction", "hn", …), set
+  // once at signup from the demoify_ref cookie. Null for pre-existing accounts
+  // and for anyone who arrived on an untagged link. Grouped in /admin/analytics;
+  // never read per-user. See src/lib/attribution.ts.
+  refSource String?
+
   sessions    Session[]
   accounts    Account[]
   memberships BandMembership[]
@@ -385,4 +391,24 @@ model Comment {
 
   @@index([projectId])
   @@map("comment")
+}
+
+// A launch-updates email address, captured from the marketing site by people
+// who are not (yet) users. Deliberately NOT a User row: signing someone up for
+// an account they didn't ask for would be worse than useless, and the whole
+// point is to reach people before they convert.
+//
+// Kept minimal on purpose — an email and where they came from. No name, no
+// preferences, nothing that would need a profile UI to manage.
+model EmailSubscriber {
+  id String @id @default(cuid())
+  // Stored lowercased and trimmed, so @unique actually de-duplicates rather
+  // than treating Foo@x.com and foo@x.com as two people.
+  email String @unique
+  // First-touch channel, same tag as User.refSource. Lets the launch email list
+  // be attributed to a channel alongside signups.
+  refSource String?
+  createdAt DateTime @default(now())
+
+  @@map("email_subscriber")
 }

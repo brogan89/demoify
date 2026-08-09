@@ -49,7 +49,11 @@
 	"ratelimits": [
 		{ "name": "RL_AUTH", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } },
 		{ "name": "RL_WRITE", "namespace_id": "1002", "simple": { "limit": 30, "period": 60 } },
-		{ "name": "RL_UPLOAD", "namespace_id": "1003", "simple": { "limit": 10, "period": 60 } }
+		{ "name": "RL_UPLOAD", "namespace_id": "1003", "simple": { "limit": 10, "period": 60 } },
+		// Unauthenticated public writes (launch-updates email capture), keyed by
+		// IP. Its own bucket rather than sharing RL_AUTH: otherwise a visitor
+		// mashing the subscribe button would throttle their own ability to log in.
+		{ "name": "RL_PUBLIC", "namespace_id": "1004", "simple": { "limit": 5, "period": 60 } }
 	],
 
 	// Non-secret config. Secrets (BETTER_AUTH_SECRET, STRIPE_*, R2_*, RESEND_API_KEY,
@@ -70,7 +74,15 @@
 		// migration 0016 (grandfathering) and the new UI ship inert; flip to
 		// "true" in a follow-up deploy to actually enforce. Flipping back is the
 		// rollback — there is no data migration to undo.
-		"REQUIRE_EMAIL_VERIFICATION": "false"
+		"REQUIRE_EMAIL_VERIFICATION": "false",
+
+		// Credit economy. Unset ⇒ ON (src/lib/credits.ts reads `!== "false"`), so
+		// this must be pinned, not omitted: the Sep 2026 launch is free and the
+		// launch copy says so out loud. "false" makes uploads free and unlimited
+		// and hides all credit UI (balance pill, buy-credits page, cost labels).
+		// Flip to "true" only when Stripe goes live — and update the public copy
+		// in the same deploy, because "free" is load-bearing in the launch posts.
+		"CREDITS_ENABLED": "false"
 	},
 
 	// --- Cron triggers for periodic analytics aggregation ---
@@ -94,14 +106,20 @@
 	// Named environments do NOT inherit bindings, so mirror what dev needs.
 	"env": {
 		"remote": {
-			"vars": { "BETTER_AUTH_URL": "http://localhost:3000" },
+			// Mirrored from the top level so `dev:remote` renders the same
+			// credit-free UI production serves.
+			"vars": {
+				"BETTER_AUTH_URL": "http://localhost:3000",
+				"CREDITS_ENABLED": "false"
+			},
 			"images": { "binding": "IMAGES" },
 			// Mirrored from the top level — named environments inherit nothing.
 			// Without this, src/lib/rate-limit.ts finds no binding and fails open.
 			"ratelimits": [
 				{ "name": "RL_AUTH", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } },
 				{ "name": "RL_WRITE", "namespace_id": "1002", "simple": { "limit": 30, "period": 60 } },
-				{ "name": "RL_UPLOAD", "namespace_id": "1003", "simple": { "limit": 10, "period": 60 } }
+				{ "name": "RL_UPLOAD", "namespace_id": "1003", "simple": { "limit": 10, "period": 60 } },
+				{ "name": "RL_PUBLIC", "namespace_id": "1004", "simple": { "limit": 5, "period": 60 } }
 			],
 			"d1_databases": [
 				{

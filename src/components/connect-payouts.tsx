@@ -36,8 +36,10 @@ export function ConnectPayouts({
     setBusy(true);
     try {
       const res = await fetch("/api/connect/onboard", { method: "POST" });
-      const data = await res.json();
+      const data = (await res.json()) as { url?: string; error?: string };
       if (!res.ok) throw new Error(data.error ?? "Could not start onboarding");
+      // A 200 with no url would otherwise navigate to the string "undefined".
+      if (!data.url) throw new Error("Onboarding did not return a redirect URL");
       window.location.href = data.url; // hand off to Stripe hosted onboarding
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Onboarding failed");

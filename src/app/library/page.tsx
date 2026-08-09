@@ -10,7 +10,7 @@ import { type SongCardData } from "@/components/song-card";
 import { parsePeaksJson } from "@/lib/waveform";
 
 export const metadata: Metadata = {
-  title: "Library · Demoify",
+  title: "Library",
   description: "Your liked songs.",
 };
 

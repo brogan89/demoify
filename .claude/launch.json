@@ -24,6 +24,16 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev:remote", "--", "--port", "3001"],
       "port": 3001
+    },
+    {
+      // Serves the already-built .open-next bundle in workerd — the only local
+      // runtime that matches production. Use it for anything `next dev` (Node)
+      // can't answer, e.g. whether next/og actually renders on Workers.
+      // Run `npx opennextjs-cloudflare build` first; this does not rebuild.
+      "name": "preview:workerd",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["opennextjs-cloudflare", "preview", "--port", "8787"],
+      "port": 8787
     }
   ]
 }

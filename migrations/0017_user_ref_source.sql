@@ -1,0 +1,27 @@
+-- First-touch signup attribution.
+--
+-- The launch plan's fourth metric is "signups by source", and the Sep 5 retro
+-- turns that ranking into a decision about which channel to keep investing in.
+-- /admin/analytics could already count signups, but had no idea where any of
+-- them came from — so the number existed and the ranking did not.
+--
+-- src/middleware.ts writes the channel tag from `?ref=` / `?utm_source=` into a
+-- 30-day cookie on first touch only, and the Better Auth user-create hook
+-- copies it here at signup. Nothing reads it back per-user; it exists purely to
+-- be GROUPed in the admin dashboard.
+--
+-- Nullable by design and stays null forever for:
+--   * every account that predates this migration,
+--   * anyone arriving on an untagged link (direct, most organic search).
+-- Those group as "direct / untagged" in the dashboard rather than being
+-- silently dropped, because a big untagged bucket is itself the signal that the
+-- tagged links aren't being used.
+--
+-- The value is normalized before it lands here (lowercased, charset-restricted,
+-- capped at 64 chars — see normalizeRefSource in src/lib/attribution.ts), so
+-- this column holds a short grouping key, not raw query-string input.
+--
+-- Additive nullable column, no table rebuild — safe under D1's always-on
+-- foreign-key enforcement (same pattern as 0015_song_artwork.sql).
+
+ALTER TABLE "user" ADD COLUMN "refSource" TEXT;

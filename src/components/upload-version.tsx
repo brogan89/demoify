@@ -18,6 +18,7 @@ import {
   putToPresigned,
 } from "@/lib/upload";
 import { createVersion } from "@/app/actions/versions";
+import type { PresignError, PresignSuccess } from "@/lib/upload-api";
 
 export function UploadVersion({
   projectId,
@@ -70,10 +71,12 @@ export function UploadVersion({
         body: JSON.stringify({ projectId, contentType, fileName: file.name }),
       });
       if (!presignRes.ok) {
-        const { error } = await presignRes.json().catch(() => ({ error: "Upload failed" }));
+        const { error } = (await presignRes
+          .json()
+          .catch(() => ({ error: "Upload failed" }))) as PresignError;
         throw new Error(error ?? "Could not start upload");
       }
-      const { uploadUrl, publicUrl } = await presignRes.json();
+      const { uploadUrl, publicUrl } = (await presignRes.json()) as PresignSuccess;
 
       await putToPresigned(uploadUrl, file, setProgress);
 

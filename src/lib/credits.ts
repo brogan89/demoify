@@ -63,7 +63,13 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
   { id: "studio", label: "Studio", credits: 1500, priceCents: 1500 },
 ];
 
-export function getPackage(id: string): CreditPackage | undefined {
+/**
+ * Accepts `undefined` because every caller is looking up an id that came off a
+ * request body, where "absent" and "unknown" both mean the same thing: no
+ * package. Callers already handle the undefined return, so widening here beats
+ * a guard at each call site.
+ */
+export function getPackage(id: string | undefined): CreditPackage | undefined {
   return CREDIT_PACKAGES.find((p) => p.id === id);
 }
 

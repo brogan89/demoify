@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 /** Rate limiters declared in wrangler.jsonc under `ratelimits`. */
-export type LimiterName = "RL_AUTH" | "RL_WRITE" | "RL_UPLOAD";
+export type LimiterName = "RL_AUTH" | "RL_WRITE" | "RL_UPLOAD" | "RL_PUBLIC";
 
 /** Cloudflare's rate-limiting binding surface (see @cloudflare/workers-types). */
 type RateLimiter = { limit(options: { key: string }): Promise<{ success: boolean }> };

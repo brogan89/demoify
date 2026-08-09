@@ -25,6 +25,15 @@ export function SiteFooter() {
           <Link href="/artists" className="transition-colors hover:text-foreground">
             Artists
           </Link>
+          <Link href="/terms" className="transition-colors hover:text-foreground">
+            Terms
+          </Link>
+          <Link href="/privacy" className="transition-colors hover:text-foreground">
+            Privacy
+          </Link>
+          <Link href="/dmca" className="transition-colors hover:text-foreground">
+            Copyright
+          </Link>
           <a
             href={`${REPO}#self-hosting`}
             target="_blank"

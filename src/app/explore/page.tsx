@@ -14,7 +14,7 @@ import { federationHubEnabled } from "@/lib/federation";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Explore · Demoify",
+  title: "Explore",
   description: "A feed of works-in-progress from bands on Demoify.",
 };
 
