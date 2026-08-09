@@ -67,9 +67,20 @@ jobs:
         if: steps.gate.outputs.ready == 'true'
         run: npx prisma generate
 
-      # Runs before the migration step on purpose: a failed check should stop the
-      # deploy outright, not after production's schema has already moved.
+      # The verification steps below all run before the migration step on purpose:
+      # a failed check should stop the deploy outright, not after production's
+      # schema has already moved. A failing step here skips every later step —
+      # migrate, build, deploy and tag — because GitHub applies an implicit
+      # success() to an `if:` that has no status-check function of its own.
       #
+      # `npm test` is `vitest run`, not watch mode. A watching runner would never
+      # exit, and this job's `concurrency: deploy-production` group is
+      # cancel-in-progress: false, so it would queue every later deploy behind it
+      # until the job timed out.
+      - name: Run unit tests
+        if: steps.gate.outputs.ready == 'true'
+        run: npm test
+
       # `npm run lint` is deliberately NOT here yet — it currently exits non-zero
       # on two pre-existing errors (src/app/admin/analytics/page.tsx and
       # src/components/federation-banner-client.tsx), so adding it today would

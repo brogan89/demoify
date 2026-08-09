@@ -233,6 +233,10 @@ and deploys; each deploy is versioned `vYYYY.MM.DD-<run#>`, shown in the site fo
 and pushed back as a git tag. See [`DEPLOYMENT.md`](DEPLOYMENT.md) for first-time setup
 and the required secrets.
 
+The unit tests gate both routes to production: CI runs them before it touches the
+remote database, and a `predeploy` script runs them ahead of a local `npm run deploy`.
+A failing test means nothing ships.
+
 ## Project layout
 
 ```
@@ -243,6 +247,7 @@ src/app/               App Router pages + API routes (auth, upload, credits, tip
 src/app/admin/         Operator-only pages (coupons, gift credits) — see docs/admin.md
 src/components/        UI (song card/view, header/footer, upload, credits, …)
 src/lib/               Core logic: db, auth, r2, stripe, credits, engagement, federation, genres, admin
+src/lib/*.test.ts      Colocated unit tests (`just test`) — a failure blocks the deploy
 docs/                  Knowledge base — deep-dives, runbooks, planning history; published via docfx
 DEPLOYMENT.md          Cloudflare/D1/R2/Stripe/CI setup walkthrough
 ```
@@ -262,6 +267,7 @@ Common [`just`](https://github.com/casey/just) recipes (run `just` for the full 
 | `just federation …` | Hub admin: register/trust/approve instances (see `docs/federation.md`). |
 | `just build` | Production build. |
 | `just lint` | Run ESLint. |
+| `just test` | Run the unit tests (also gates every deploy). |
 
 ## Security & going public
 
