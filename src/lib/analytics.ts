@@ -158,12 +158,12 @@ export async function getSnapshot(days: number = 30): Promise<AnalyticsSnapshot>
     // Credit purchases (purchase transactions)
     prisma.creditTransaction.findMany({
       where: { reason: "purchase" },
-      select: { delta: true, createdAt: true },
+      select: { delta: true, amountPaidCents: true, createdAt: true },
     }),
     // Recent credit purchases
     prisma.creditTransaction.findMany({
       where: { reason: "purchase", createdAt: { gte: since } },
-      select: { delta: true },
+      select: { delta: true, amountPaidCents: true },
     }),
     // Total credits in circulation
     prisma.band.aggregate({ _sum: { credits: true } }),
@@ -181,12 +181,18 @@ export async function getSnapshot(days: number = 30): Promise<AnalyticsSnapshot>
   const totalTipGrossCents = tips._sum.amountCents ?? 0;
   const recentTipVolumeCents = recentTips.reduce((s, t) => s + t.amountCents, 0);
 
-  // Credit purchases: delta is positive (credits granted)
-  // Price is credits / 100 = cents (1 credit = 1 cent)
-  const totalCreditPurchaseCredits = creditTx.reduce((s, t) => s + t.delta, 0);
-  const totalCreditRevenueCents = totalCreditPurchaseCredits;
-  const recentCreditPurchaseCredits = recentCreditTx.reduce((s, t) => s + t.delta, 0);
-  const recentCreditRevenueCents = recentCreditPurchaseCredits;
+  // Credit purchases: revenue is what the buyer PAID (amountPaidCents), which
+  // diverges from delta (credits granted) on every coupon-discounted sale.
+  // Pre-0019 rows have amountPaidCents = null; those were all full-price at
+  // 1 credit = 1¢, so delta is the correct fallback.
+  const totalCreditRevenueCents = creditTx.reduce(
+    (s, t) => s + (t.amountPaidCents ?? t.delta),
+    0,
+  );
+  const recentCreditRevenueCents = recentCreditTx.reduce(
+    (s, t) => s + (t.amountPaidCents ?? t.delta),
+    0,
+  );
 
   // MRR estimate: (revenue in last 30d) / days * 30
   const recentTotalRevenueCents = recentTipVolumeCents + recentCreditRevenueCents;

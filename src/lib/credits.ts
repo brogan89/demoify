@@ -77,6 +77,48 @@ export function formatUsd(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
+/**
+ * Stripe's minimum charge in USD. A Checkout session below this (including
+ * $0.00 after a deep discount) is rejected by Stripe at session-creation
+ * time, so every discount path must check `isChargeable` first. 100%-off is
+ * deliberately unsupported — that's what FREE_CREDITS coupons are for (they
+ * grant credits directly and never touch Stripe).
+ */
+export const STRIPE_MIN_CHARGE_CENTS = 50;
+
+export type DiscountKind = "PERCENT_OFF" | "FIXED_OFF";
+
+/**
+ * The ONE implementation of discount math. The buy page preview and the
+ * checkout route both use this — if they computed independently, a drift
+ * would show the buyer one price and charge another.
+ */
+export function discountedPriceCents(
+  kind: DiscountKind,
+  amount: number,
+  priceCents: number,
+): number {
+  const off = kind === "PERCENT_OFF" ? Math.round((priceCents * amount) / 100) : amount;
+  return Math.max(0, priceCents - off);
+}
+
+/** True when Stripe will accept a charge of this size. */
+export function isChargeable(cents: number): boolean {
+  return cents >= STRIPE_MIN_CHARGE_CENTS;
+}
+
+/**
+ * Which packages a discount coupon can actually be applied to — i.e. where
+ * the discounted total still clears Stripe's minimum. Empty means the coupon
+ * is unusable and should not be created / should be rejected at validation.
+ * (Kept env-free: client components import this module.)
+ */
+export function packagesUsableWith(kind: DiscountKind, amount: number): CreditPackage[] {
+  return CREDIT_PACKAGES.filter((p) =>
+    isChargeable(discountedPriceCents(kind, amount, p.priceCents)),
+  );
+}
+
 /** Whole tracks the given credit balance can still upload. */
 export function uploadsRemaining(credits: number): number {
   return Math.floor(credits / UPLOAD_COST);

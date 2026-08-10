@@ -28,6 +28,10 @@ const ENV_READ_BY_UNITS_UNDER_TEST = [
   "R2_SECRET_ACCESS_KEY",
   "R2_BUCKET",
   "R2_PUBLIC_URL",
+  // isStripeConfigured()/stripeMode() read these per call; a developer with a
+  // real key exported would flip the unconfigured baseline the tests assert.
+  "STRIPE_SECRET_KEY",
+  "STRIPE_WEBHOOK_SECRET",
 ];
 
 // NODE_ENV is deliberately absent: Vitest sets it to "test", which is the correct
