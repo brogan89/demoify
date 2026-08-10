@@ -10,21 +10,28 @@ with the pain.
 
 ## Pre-flight — do not post until these clear
 
-All five were missing/unconfirmed at HEAD `830dfa3` on 2026-08-09. Blockers 1–4 are **built but
-not yet live** — they sit in PR #12 (`launch-preconditions`) and only count as cleared once that
-is merged and deployed.
+All five were missing/unconfirmed at HEAD `830dfa3` on 2026-08-09. **Blockers 1–4 shipped and are
+live in production** as of PR #12 (`1e56c82`) and PR #13 (`566c7a6`), same day. Only the seeding
+gate remains.
 
 | # | Blocker | Status | Check |
 |---|---|---|---|
-| 1 | **No terms / privacy / DMCA page.** Strategy assumption #5, confirmed absent. | Built in #12 — pages exist, **legal copy still needs a human read**, and `legal@demoify.app` must actually receive mail | `demoify.app/terms` loads and the DMCA address resolves |
-| 2 | **No OG images / `metadataBase`** — Reddit renders a bare grey card. Strategy 2a #1. | Built in #12, verified rendering in workerd | A song URL unfurls with artwork in Discord |
-| 3 | **No `?ref`/UTM capture** — kills the "signups by source" metric and the Sep 5 retro. | Built in #12, verified end-to-end | A signup via `?ref=reddit_musicproduction` shows that source in `/admin/analytics` |
-| 4 | **`CREDITS_ENABLED` unset ⇒ credits were ON in production** — uploads cost 10 credits, so "free right now" was false. | Pinned `"false"` in #12 | Upload UI shows no credit cost on demoify.app |
-| 5 | **Launch gate: ≥100 real tracks in Explore by Aug 27**, else slip a week. | **Not started** — this one is seeding work, not code | Explore shows ≥100 tracks from outside accounts |
+| 1 | **No terms / privacy / DMCA page.** Strategy assumption #5, confirmed absent. | ✅ Live — `/terms`, `/privacy`, `/dmca` all 200. Two caveats below. | `demoify.app/terms` loads and the DMCA address resolves |
+| 2 | **No OG images / `metadataBase`** — Reddit renders a bare grey card. Strategy 2a #1. | ✅ Live — per-song card verified in production (HTTP 200, `image/png`, ~184 KB) | A song URL unfurls with artwork in Discord |
+| 3 | **No `?ref`/UTM capture** — kills the "signups by source" metric and the Sep 5 retro. | ✅ Live — first-touch capture + signups-by-source in `/admin/analytics` | A signup via `?ref=reddit_musicproduction` shows that source in `/admin/analytics` |
+| 4 | **`CREDITS_ENABLED` unset ⇒ credits were ON in production** — uploads cost 10 credits, so "free right now" was false. | ✅ Pinned `"false"` and deployed | Upload UI shows no credit cost on demoify.app |
+| 5 | **Launch gate: ≥100 real tracks in Explore by Aug 27**, else slip a week. | ❌ **Not started** — seeding work, not code. The remaining long pole. | Explore shows ≥100 tracks from outside accounts |
 
-One more, not on the original list: `REQUIRE_EMAIL_VERIFICATION` is still pinned `"false"` in
-production, so the unverified-account write gate is inert. Going public with it off means
-throwaway accounts can post comments. Worth flipping before the music subs.
+`REQUIRE_EMAIL_VERIFICATION` is now `"true"` in production (#13), so unverified accounts are
+read-only and throwaway signups can't comment. Email sends from `send.demoify.app` via Resend;
+inbound `legal@demoify.app` runs on Cloudflare Email Routing.
+
+**Two caveats that survive the ✅ on blocker 1:**
+
+- The legal copy is an unreviewed draft. It was written to match what the app actually does, with
+  New Zealand governing law, but no lawyer has read it.
+- `legal@demoify.app` is published on a live public page. Confirm mail to it actually lands —
+  an unmonitored takedown address is worse than none.
 
 **Independent of all of the above — start now.** The Week-1 task *"warm Reddit accounts (genuine
 feedback, zero promo)"* hasn't begun. Three weeks of real commenting in these subs is what makes a
