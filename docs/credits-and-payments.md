@@ -95,6 +95,10 @@ like/comment/play server actions (`src/app/actions/likes.ts`,
   - `reason String` — `"upload"` | `"purchase"` | `"like"` | `"comment"` |
     `"play"` | `"coupon"` | `"gift"`
   - `stripeSessionId String? @unique` — makes purchase fulfilment idempotent.
+  - `amountPaidCents Int?` — what the buyer actually paid (Stripe's
+    `amount_total`); diverges from `delta` on coupon-discounted purchases, so
+    revenue reporting sums this (with a `delta` fallback for older rows).
+    Null for non-purchase rows.
   - `userId String?` / `refId String?` — who triggered it and what it refers to
     (a song for engagement rewards, a coupon id for coupon redemptions). Null
     for upload/purchase rows. Backs the `@@unique([userId, reason, refId])`
@@ -109,15 +113,17 @@ like/comment/play server actions (`src/app/actions/likes.ts`,
    checks the band's balance before issuing a presigned R2 URL. If
    `credits < UPLOAD_COST` it returns **HTTP 402** with `code:
    "INSUFFICIENT_CREDITS"`, so a band that can't pay never wastes an upload.
-2. **Atomic charge** — `createVersion` (`src/app/actions/versions.ts`) does the real
-   debit inside one transaction:
+2. **Atomic charge** — `createVersion` (`src/app/actions/versions.ts`) charges
+   up-front with a single conditional statement (D1 has no real transactions —
+   Prisma `$transaction` arrays run as individual statements there):
    ```
    updateMany(where: { id, credits: { gte: UPLOAD_COST } },
               data:  { credits: { decrement: UPLOAD_COST } })
    ```
    If `count === 0` the balance was too low → throw → version is **not** created and
-   nothing is charged. On success it also writes the `SongVersion`, a
-   `CreditTransaction(delta: -10, reason: "upload")`, all in the same transaction.
+   nothing is charged. On success it writes the `SongVersion` and a
+   `CreditTransaction(delta: -10, reason: "upload")`, refunding the charge if
+   that write fails.
 
    The conditional decrement prevents going negative and prevents double-spend under
    concurrency; the existing `(projectId, versionNumber)` unique constraint still
@@ -148,12 +154,22 @@ hitting Stripe).
    returns its URL; the browser is redirected to Stripe. (If a discount coupon is
    applied, metadata also carries `couponId` + `userId` — see [Coupons](#coupons).)
 3. **Fulfilment** — Stripe calls `POST /api/credits/webhook`:
-   - verifies the signature with `STRIPE_WEBHOOK_SECRET`,
-   - on `checkout.session.completed` + `payment_status === "paid"`, in one
-     transaction creates `CreditTransaction(delta: +credits, reason: "purchase",
-     stripeSessionId)` and increments `Band.credits`.
-   - **Idempotent**: a replayed event hits the unique `stripeSessionId` (Prisma
-     `P2002`) and is treated as a no-op.
+   - verifies the signature with `STRIPE_WEBHOOK_SECRET`
+     (`constructEventAsync` — the sync variant throws on workerd's crypto
+     provider), then rejects events whose `livemode` doesn't match the key's
+     mode,
+   - on `checkout.session.completed` + `payment_status === "paid"`,
+     **claim-first + compensate** — NOT a transaction, because D1 runs
+     Prisma `$transaction` arrays as individual statements (the adapter
+     itself warns it "breaks the guarantees of the ACID properties"):
+     1. create `CreditTransaction(delta, reason: "purchase", stripeSessionId,
+        amountPaidCents)` — the unique `stripeSessionId` is the idempotency
+        claim; a replay hits `P2002` here and the delivery is a no-op,
+     2. increment `Band.credits` — and if THIS fails, delete the claim row
+        before returning 500, so Stripe's retry can redo the work instead of
+        P2002-ing into a false success,
+     3. coupon bookkeeping last, each write tolerant of `P2002` — it must
+        never fail the handler after money moved.
 4. User returns to `/dashboard/credits?purchase=success`; the page toasts and refreshes.
 
 Fulfilment is driven entirely by the webhook (not the success redirect), so credits
@@ -170,6 +186,18 @@ There are two kinds, both defined on the `Coupon` model (`prisma/schema.prisma`)
 `FREE_CREDITS` (amount = credits granted) and `PERCENT_OFF` / `FIXED_OFF`
 (amount = percent or cents off a purchase).
 
+**The $0.50 rule.** Stripe rejects any charge under 50¢ (USD), including
+$0.00, so a discount is only usable on packages whose discounted price still
+clears that minimum (`packagesUsableWith` in `src/lib/credits.ts` — shared by
+`createCoupon`, `validateCoupon`, the checkout route, and both UIs). A
+too-deep discount is rejected at creation; a legacy one is rejected at
+validation; the checkout route 400s as the final backstop; and the buy page
+sells excluded packs at full price with the code omitted. **100%-off does not
+exist** — issue a `FREE_CREDITS` coupon instead: it grants credits directly
+and never touches Stripe, which is also why it's the right tool for free
+early-signup promos (one shared code with `maxRedemptions` works: redemption
+is capped once per band AND once per user by unique constraints).
+
 ### Redeeming (user-facing)
 
 A single "Have a code?" input lives at the top of `src/components/buy-credits.tsx`
@@ -177,9 +205,11 @@ A single "Have a code?" input lives at the top of `src/components/buy-credits.ts
 which looks up the code's kind and dispatches:
 
 - **`FREE_CREDITS`** → `redeemCoupon` grants the credits immediately (no Stripe
-  involved): one transaction creates a `CouponRedemption` row, a real
-  `CreditTransaction(reason: "coupon", delta: +amount)`, increments `Band.credits`,
-  and increments the coupon's `redemptionCount`.
+  involved): it creates a `CouponRedemption` row (whose unique constraints are
+  what actually block double-redemption — the batch's statements run
+  individually on D1), a real `CreditTransaction(reason: "coupon", delta:
+  +amount)`, increments `Band.credits`, and increments the coupon's
+  `redemptionCount`.
 - **`PERCENT_OFF` / `FIXED_OFF`** → `validateCoupon` only *previews* the discount
   (no DB writes — nothing has been paid for yet) and the client holds onto it
   client-side until the user clicks **Buy** on a package. `POST
@@ -219,15 +249,27 @@ the admin UI at all; disabling is the only lifecycle action.
 Add to `.env` (see `.env.example`). Buttons/flows stay disabled until set.
 
 ```
-STRIPE_SECRET_KEY=""        # Stripe secret key
+STRIPE_SECRET_KEY=""        # Stripe secret key (sk_test_… locally, ALWAYS)
 STRIPE_WEBHOOK_SECRET=""    # Signing secret for the webhook endpoint
 ```
 
-- Webhook endpoint: `<BETTER_AUTH_URL>/api/credits/webhook`, event
-  `checkout.session.completed`.
+- Webhook endpoint: `<BETTER_AUTH_URL>/api/credits/webhook`, events
+  `checkout.session.completed` + `account.updated`. Pin the endpoint's API
+  version to the one pinned in `src/lib/stripe.ts` (`2026-05-27.dahlia`) —
+  the SDK pin covers outbound calls only; payload shape is set per-endpoint.
 - Local testing: `stripe listen --forward-to localhost:3000/api/credits/webhook`
-  (the CLI prints the `whsec_…` to use as `STRIPE_WEBHOOK_SECRET`).
-- `isStripeConfigured()` (`src/lib/stripe.ts`) is the single gate.
+  (the CLI prints the `whsec_…` to use as `STRIPE_WEBHOOK_SECRET` — a
+  different one per listen session).
+- **Two gates, both required**: `creditsEnabled()` is the master payments
+  switch (credits, tips, Connect — flipping `CREDITS_ENABLED="false"` is the
+  rollback), and `isStripeConfigured()` requires the key to exist. The
+  webhook alone skips `creditsEnabled()` so in-flight sessions fulfil after
+  a rollback.
+- The client (`src/lib/stripe.ts`) pins `apiVersion` and uses the fetch
+  `httpClient`, so behaviour doesn't depend on which stripe-node build the
+  bundler resolves. `stripeMode()` classifies the key (`sk`/`rk` ×
+  `live`/`test`); the webhook 503s on an unrecognised prefix and ignores
+  events whose `livemode` doesn't match.
 
 ## Key files
 
@@ -269,17 +311,40 @@ Coupons (verified against the database directly):
 - A coupon with redemptions can't be hard-deleted (`Restrict` FK); disabling
   (`active = false`) works and blocks further redemption.
 
-Payments (gated; not exercised without keys):
+Payments (verified on real workerd — `opennextjs-cloudflare preview` + local
+D1, with synthetic events signed by the SDK's own test-header helper):
 - No keys → `/api/credits/checkout` returns **503**; buy page shows the
-  "coming soon" dialog instead of a broken checkout.
-- With keys → buy a package, complete Stripe test checkout, confirm webhook adds
-  credits and the ledger row appears; re-send the webhook event and confirm the
-  balance does **not** change (idempotency).
+  payments-unavailable dialog instead of a broken checkout.
+- Signed `checkout.session.completed` → +150 credits, one ledger row with
+  `stripeSessionId` and `amountPaidCents`.
+- Replaying the same session id → `{received, replay}` and **no change** to
+  balance, ledger, or coupon `redemptionCount`.
+- Tampered signature → **400**; event with `livemode: true` against a test
+  key → **200 `{ignored: "livemode_mismatch"}`** and nothing granted.
+- Coupon purchase (150 credits, 75¢ paid) → ledger row records `delta=150`,
+  `amountPaidCents=75`; one `CouponRedemption`; `redemptionCount=1`.
+- `account.updated` with an **older or equal** `event.created` than the last
+  applied one → `payoutsEnabled` does **not** regress (the
+  `payoutsSyncedAt` watermark rejects it).
+
+## Refunds & disputes — KNOWN GAP
+
+Nothing handles `charge.refunded` or `charge.dispute.created`. A dashboard
+refund returns the money but leaves the granted credits in place — correct
+per the terms (purchases are final; refunds are a manual goodwill act), but
+it means: refund in the Stripe dashboard, then adjust the balance by hand
+with `giftCredits` (`/admin`) if clawback is intended. Tracked as follow-up
+work; the terms page states the no-refund posture with the
+consumer-law carve-out.
 
 ## Future work
 
+- `charge.refunded` / `charge.dispute.created` handling → negative
+  `CreditTransaction`, clamped decrement (see Known Gap above).
+- Periodic reconcile query for stranded claims (ledger row without its
+  balance increment — the claim/compensate pattern narrows but can't close
+  the no-transaction window).
 - Sales/promo pricing (already supported by per-package `priceCents`; needs UI).
-- Refunds → negative `CreditTransaction` on `charge.refunded`.
 - Surface the `CreditTransaction` ledger as a user-visible history page.
 - Coupon analytics beyond the raw `redemptionCount` (e.g. revenue impact of
   discount codes).

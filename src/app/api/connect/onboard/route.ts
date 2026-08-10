@@ -4,11 +4,19 @@ import { prisma } from "@/lib/db";
 import { requireVerifiedUser, gateResponse } from "@/lib/session";
 import { getActiveBand } from "@/lib/band";
 import { isStripeConfigured, stripe, appUrl } from "@/lib/stripe";
+import { creditsEnabled } from "@/lib/credits";
 
 // Starts (or resumes) Stripe Connect onboarding for the active band so it can
 // receive tips. Creates an Express account on first use, stores its id on the
 // band, then returns a one-time hosted onboarding link to redirect the user to.
 export async function POST() {
+  // Master payments switch — see tips/checkout for the rationale.
+  if (!creditsEnabled()) {
+    return NextResponse.json(
+      { error: "Payments are disabled on this instance." },
+      { status: 503 },
+    );
+  }
   if (!isStripeConfigured()) {
     return NextResponse.json(
       { error: "Payments are not configured. Set STRIPE_SECRET_KEY." },

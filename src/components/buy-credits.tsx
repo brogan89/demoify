@@ -202,10 +202,11 @@ export function BuyCredits({
       <Dialog open={comingSoonOpen} onOpenChange={setComingSoonOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Coming soon</DialogTitle>
+            <DialogTitle>Payments not available</DialogTitle>
             <DialogDescription>
-              Buying credits isn&rsquo;t available just yet — we&rsquo;re still setting up
-              payments. Check back soon!
+              Payments aren&rsquo;t configured on this instance, so credits can&rsquo;t be
+              purchased. You can still earn credits by listening, liking, and commenting
+              on other artists&rsquo; tracks.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

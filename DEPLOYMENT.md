@@ -30,8 +30,12 @@ normal deploy. Reference for future schema changes:
 - **Create migration SQL:**
   ```
   npx wrangler d1 migrations create demoify <name>
-  npx prisma migrate diff --from-local-d1 --to-schema prisma/schema.prisma --script > migrations/<file>.sql
   ```
+  then write the SQL by hand (additive statements, header comment explaining
+  the change — see `migrations/0019_stripe_live_hardening.sql` for the house
+  style). Prisma 7 removed `--from-local-d1`, so `prisma migrate diff` can no
+  longer diff against the local D1 directly; hand-written SQL checked against
+  the schema is the current path.
 - **Apply:** `npx wrangler d1 migrations apply demoify --local` (dev) and `--remote` (prod, also
   done automatically by CI).
 
@@ -70,15 +74,36 @@ satisfy by default.
 
 ## 5. Stripe (live)
 
-1. Switch to live mode, copy the live `STRIPE_SECRET_KEY`.
+1. Switch to live mode, copy the live `STRIPE_SECRET_KEY` (`sk_live_…`; a
+   restricted `rk_live_…` key also classifies as live).
 2. Add a webhook endpoint → `https://demoify.app/api/credits/webhook`, events
-   `checkout.session.completed` **and** `account.updated`. Copy the signing
-   secret → `STRIPE_WEBHOOK_SECRET`.
+   `checkout.session.completed` **and** `account.updated` — those two only.
+   **Pin the endpoint's API version to `2026-05-27.dahlia`** (the version
+   pinned in `src/lib/stripe.ts`) — the SDK pin covers outbound calls only;
+   webhook payload shape is set per-endpoint here. Copy the signing secret →
+   `STRIPE_WEBHOOK_SECRET`.
+
+   Test mode and live mode have **separate endpoints with separate signing
+   secrets**; the Worker holds exactly one pair. A test event reaching
+   production is answered `200 {ignored: "livemode_mismatch"}` — expected,
+   not a bug. Locally the secret instead comes from `stripe listen` (new
+   value per session).
 3. **Tipping (artist payouts):** enable **Connect → Express** in the Stripe
    dashboard and set your platform branding. The `account.updated` event above is
    what flips an artist to "payouts enabled". Full design + setup + test steps:
    [`docs/tipping.md`](docs/tipping.md). No extra secrets — tips reuse
    `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`.
+4. **Smoke-test before enabling payments:** with the secrets set but
+   `CREDITS_ENABLED` still `"false"`, use the endpoint's **Send test event**
+   button and confirm a 2xx plus the event id in Workers Logs. This proves
+   signature verification on real workerd while purchases are still
+   impossible.
+
+**HARD PRECONDITION for `CREDITS_ENABLED="true"`:** both Stripe secrets exist
+as Worker secrets (`npx wrangler secret list | grep STRIPE`) and step 4
+passed. The flag is the master payments switch — flipping it without the
+secrets just 503s every payment route, but flipping it with UNTESTED secrets
+risks selling credits whose webhook can't fulfil.
 
 ## 6. Worker secrets
 
@@ -105,8 +130,12 @@ secret — D1 is a binding.
 
 ### Optional vars — credits, admin & federation
 
-- `CREDITS_ENABLED` — leave unset/`"true"` for demoify.app (credits on). A self-hosted
-  fork that wants free uploads sets it to `"false"` (a plain var in `wrangler.jsonc` is fine).
+- `CREDITS_ENABLED` — the **master payments switch**, pinned `"true"` for
+  demoify.app: credits are enforced and every Stripe surface (credit checkout,
+  tips, Connect onboarding) is live. `"false"` = free unlimited uploads, all
+  credit UI hidden, all payment routes 503 — the instant payments rollback
+  (the webhook alone stays live so in-flight checkouts still fulfil). A
+  self-hosted fork that wants free uploads sets it to `"false"`.
 - `ADMIN_EMAILS` — comma-separated emails allowed to manage coupons and gift
   credits at `/admin` (see [`docs/admin.md`](docs/admin.md)). Unset disables the
   section for everyone. Not a credential, but contains a real email — a plain
@@ -169,6 +198,25 @@ you change the schema, re-run `npx wrangler d1 migrations apply demoify --local`
 - [ ] Sign up on demoify.app → verification email arrives → verify → log in.
 - [ ] Password reset email arrives and completes.
 - [ ] Upload an MP3 → plays back from `cdn.demoify.app`.
-- [ ] Stripe checkout → credits increment (webhook 200).
+- [ ] Stripe checkout → credits increment (webhook 200). *(local test-mode e2e verified on workerd — see docs/credits-and-payments.md)*
 - [ ] Stripe Connect enabled; artist `/dashboard/payouts` onboarding → `account.updated` flips payouts on; test tip splits 90/10 (see `docs/tipping.md`).
+- [ ] Live endpoint's **Send test event** returns 2xx with the event id in Workers Logs (before flipping `CREDITS_ENABLED`).
+- [ ] Test-mode event against production → `200 {ignored: "livemode_mismatch"}`, nothing granted.
+- [ ] Coupon below the $0.50 minimum → checkout returns 400 (not 500); admin UI shows which packs a discount applies to.
+- [ ] Replay a delivered `checkout.session.completed` from the Stripe dashboard → balance unchanged.
+- [ ] Re-send an older `account.updated` → `payoutsEnabled` does not regress.
+- [ ] Live smoke test: buy the $1.50 Starter with a real card → credits arrive; refund it in the dashboard (NOTE: the refund does **not** claw back credits — `charge.refunded` handling is a known follow-up; adjust with `giftCredits` if needed).
 - [ ] Push to `main` → Actions deploys cleanly.
+
+## Payments rollback
+
+- **Instant off-switch:** set `CREDITS_ENABLED` to `"false"` in `wrangler.jsonc` and deploy
+  (or `npx wrangler deploy` directly for speed). Every payment route 503s and all payment
+  UI disappears; the webhook stays live so already-started checkouts still fulfil.
+- **Webhook misbehaving:** *disable* the endpoint in the Stripe dashboard — do **not**
+  delete it. Stripe retries failed deliveries for ~3 days; re-enable after the fix and the
+  backlog drains safely (fulfillment is idempotent on `stripeSessionId`).
+- **Wrongly granted credits:** the `credit_transaction` ledger identifies the sessions;
+  correct balances with `giftCredits` (`/admin`).
+- **Key rotation:** rotate the secret, then **deploy** — `stripe()` caches the client
+  per isolate, so a secret update alone doesn't reliably take effect.

@@ -5,6 +5,7 @@ import { Lock, Pencil } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { getMembership, isMember, canManageSongs } from "@/lib/band";
+import { creditsEnabled } from "@/lib/credits";
 import { SongView, type VersionDTO } from "@/components/song-view";
 import { type CommentDTO } from "@/components/comments";
 import { parsePeaksJson } from "@/lib/waveform";
@@ -193,7 +194,7 @@ export default async function PublicSongPage({
             projectId={project.id}
             returnPath={`/${project.band.username}/${slug}`}
             isAuthed={Boolean(currentUser)}
-            canTip={project.band.payoutsEnabled && !isMember(role)}
+            canTip={creditsEnabled() && project.band.payoutsEnabled && !isMember(role)}
           />
         )}
         {isMember(role) && (

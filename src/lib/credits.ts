@@ -16,11 +16,17 @@ export const UPLOAD_COST = 10;
 export const CREDITS_PER_USD = 100;
 
 /**
- * Whether the credit economy is enforced. On by default (the hosted SaaS gates
- * uploads behind credits); self-hosters set `CREDITS_ENABLED=false` to make
- * uploads free and unlimited, since they pay for their own storage. When off,
- * uploads aren't charged, engagement rewards aren't granted, and credit UI is
- * hidden. (Stripe credit purchases are independently gated by `isStripeConfigured`.)
+ * The MASTER payments switch. On by default (the hosted SaaS gates uploads
+ * behind credits); self-hosters set `CREDITS_ENABLED=false` to make uploads
+ * free and unlimited, since they pay for their own storage.
+ *
+ * When off: uploads aren't charged, engagement rewards aren't granted, credit
+ * UI is hidden — and every Stripe surface is disabled too: credit checkout,
+ * tip checkout, Connect onboarding, and the payouts/tip UI. Flipping this to
+ * "false" is the payments rollback. The one deliberate exception is the
+ * Stripe webhook, which stays live so in-flight Checkout sessions still
+ * fulfil after a rollback. (`isStripeConfigured` additionally gates every
+ * Stripe call site on the key actually existing.)
  */
 export function creditsEnabled(): boolean {
   return process.env.CREDITS_ENABLED !== "false";

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireVerifiedUser, gateResponse } from "@/lib/session";
 import { getMembership, isMember } from "@/lib/band";
 import { isStripeConfigured, stripe, appUrl } from "@/lib/stripe";
+import { creditsEnabled } from "@/lib/credits";
 import { isValidTipAmount, splitTip } from "@/lib/tips";
 
 // Creates a Stripe Checkout session for a real-money tip. Uses a destination
@@ -11,6 +12,16 @@ import { isValidTipAmount, splitTip } from "@/lib/tips";
 // stays with the platform and the rest transfers to the artist's connected
 // account. The webhook records the Tip row on completion.
 export async function POST(req: Request) {
+  // CREDITS_ENABLED is the master payments switch (credits + tips + Connect):
+  // flipping it "false" is the instant rollback, and no secret-key change can
+  // silently turn real-money tipping on while it's off. (The webhook is
+  // deliberately NOT behind it, so in-flight sessions still fulfil.)
+  if (!creditsEnabled()) {
+    return NextResponse.json(
+      { error: "Payments are disabled on this instance." },
+      { status: 503 },
+    );
+  }
   if (!isStripeConfigured()) {
     return NextResponse.json(
       { error: "Payments are not configured." },
