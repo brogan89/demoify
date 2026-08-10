@@ -86,6 +86,21 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        {/* MUST stay the first element in <body>. Components that inject
+            inline scripts by stringifying a function (next-themes' theme
+            init, ErrorMonitor) serialize the BUNDLED copy of that function,
+            which esbuild's keepNames instrumentation has salted with
+            __name(...) calls — a helper that only exists inside the worker
+            bundle. Without this shim the browser throws "__name is not
+            defined" and the pre-hydration theme setter dies (flash of wrong
+            theme). Defining a compatible no-op first lets those scripts run;
+            harmless if the bundler ever stops injecting it. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              'self.__name=self.__name||function(t,n){try{Object.defineProperty(t,"name",{value:n,configurable:true})}catch(e){}return t};',
+          }}
+        />
         <ErrorMonitor />
         <AttributionCapture />
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
