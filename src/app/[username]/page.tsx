@@ -5,6 +5,7 @@ import { Pencil } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { getMembership, isMember } from "@/lib/band";
+import { creditsEnabled } from "@/lib/credits";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { SongFeed } from "@/components/song-feed";
@@ -126,7 +127,7 @@ export default async function ArtistProfilePage({
                 bandDisplayName={band.displayName}
                 returnPath={`/${band.username}`}
                 isAuthed={Boolean(currentUser)}
-                canTip={band.payoutsEnabled && !isMember(role)}
+                canTip={creditsEnabled() && band.payoutsEnabled && !isMember(role)}
               />
               {isMember(role) && (
                 <Button asChild variant="outline" size="sm">

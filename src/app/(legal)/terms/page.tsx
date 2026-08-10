@@ -91,9 +91,19 @@ export default function TermsPage() {
 
       <h2>6. Money</h2>
       <p>
-        <strong>Demoify is free to use right now.</strong> The credit system that meters uploads
-        is switched off, and there is nothing to buy. If that changes, existing accounts will be
-        told before any charge applies, and the change will be reflected on this page.
+        <strong>Uploads are metered by credits; listening is free.</strong> Every new account
+        starts with 100 free credits — enough for 10 uploads — and each upload costs 10 credits.
+        You can earn more credits free by engaging with other artists&rsquo; music (listening,
+        liking, commenting), or buy credit packs starting at $1.50 USD. Prices are always shown
+        before you pay, and payment is processed by Stripe — we never see or store your card
+        details.
+      </p>
+      <p>
+        <strong>Credit purchases are final.</strong> Credits are a prepaid service credit, not a
+        deposit: they have no cash value, are not transferable, and purchases are not refundable
+        except where a law that applies to you (for example the NZ Consumer Guarantees Act, or
+        EU/UK consumer rights) says otherwise. If a purchase goes wrong — you were charged and
+        the credits never arrived — contact us and we will fix the balance or refund the charge.
       </p>
       <p>
         Where tipping is enabled, listeners can send money to an artist through Stripe Connect.

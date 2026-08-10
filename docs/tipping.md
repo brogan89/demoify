@@ -60,7 +60,11 @@ destination charge; the `Tip` row is just the record.
    `/dashboard/payouts?return=1`.
 4. Stripe sends **`account.updated`** to the webhook; we flip
    `Band.payoutsEnabled` based on `charges_enabled && payouts_enabled`. Once
-   `true`, the band can receive tips.
+   `true`, the band can receive tips. The write is **monotonic**: each event's
+   `created` timestamp is stored in `Band.payoutsSyncedAt`, and only strictly
+   newer events are applied — Stripe doesn't guarantee delivery order, and an
+   unguarded write would let a retried older event flip a working artist's
+   payouts back off.
 
 ## Tipping flow (payment)
 
@@ -89,8 +93,10 @@ destination charge; the `Tip` row is just the record.
    toasts a thank-you (`src/components/tip-result-toast.tsx`).
 
 > The credits webhook and tip handling share one endpoint. A credits purchase
-> has `credits > 0` and no `kind`; a tip has `kind: "tip"` and no `credits`, so
-> the two branches never overlap.
+> has `credits > 0` and no `kind`; a tip has `kind: "tip"` and no `credits`.
+> Checkout metadata discipline keeps them disjoint — and if they ever aren't,
+> `planFromEvent` (`src/lib/stripe-webhook.ts`) resolves credits-first,
+> deterministically. Pinned by a unit test.
 
 ## Configuration
 
@@ -101,8 +107,13 @@ STRIPE_SECRET_KEY=""        # Stripe secret key
 STRIPE_WEBHOOK_SECRET=""    # Signing secret for the webhook endpoint
 ```
 
-`isStripeConfigured()` (`src/lib/stripe.ts`) gates everything; with no keys the
-payout/tip APIs return **503** and the payouts UI says payments aren't configured.
+**Two gates, both required**: `creditsEnabled()` — the master payments switch
+(`CREDITS_ENABLED`) — and `isStripeConfigured()`. Tips, Connect onboarding,
+the payouts page, and the Tip button are all off when either is missing:
+`CREDITS_ENABLED="false"` 503s the APIs and hides the UI (the instant
+rollback), and with no key the payouts UI says payments aren't configured.
+This is deliberate — setting a secret key alone must never switch real-money
+tipping on.
 
 ## Setup checklist
 
@@ -115,7 +126,9 @@ Do these once to turn tipping on (the feature is fully built but inert until the
    (`<BETTER_AUTH_URL>/api/credits/webhook`). It should now be subscribed to:
    - `checkout.session.completed` (already there for credits)
    - `account.updated` (new — needed to flip `payoutsEnabled`)
-   No new endpoint or signing secret is required.
+   No new endpoint or signing secret is required. While you're there, pin the
+   endpoint's **API version** to the one pinned in `src/lib/stripe.ts`
+   (`2026-05-27.dahlia`) — payload shape is set per-endpoint, not by the SDK.
 3. **Apply the migration to the remote D1 database:**
    ```
    npx wrangler d1 migrations apply demoify --remote

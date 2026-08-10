@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { getActiveBand, canManageMembers, canManageSongs, type Role } from "@/lib/band";
+import { creditsEnabled } from "@/lib/credits";
 import { ManageBandMembers, type MemberRow } from "@/components/manage-band-members";
 import { EditArtistProfile } from "@/components/edit-artist-profile";
 import { parseSocialLinks } from "@/lib/socials";
@@ -67,7 +68,9 @@ export default async function BandPage() {
         </section>
       )}
 
-      {canManageMembers(active.role) && (
+      {/* Hidden when payments are off — /dashboard/payouts redirects anyway,
+          so the link would dead-end. */}
+      {creditsEnabled() && canManageMembers(active.role) && (
         <section className="mb-8">
           <h2 className="mb-1 text-sm font-medium">Tips &amp; payouts</h2>
           <p className="mb-3 text-sm text-muted-foreground">

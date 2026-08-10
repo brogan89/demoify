@@ -4,10 +4,14 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { getActiveBand } from "@/lib/band";
 import { isStripeConfigured } from "@/lib/stripe";
+import { creditsEnabled } from "@/lib/credits";
 import { PLATFORM_FEE_PERCENT } from "@/lib/tips";
 import { ConnectPayouts } from "@/components/connect-payouts";
 
 export default async function PayoutsPage() {
+  // Payments off ⇒ no payouts surface at all (mirrors /dashboard/credits).
+  if (!creditsEnabled()) redirect("/dashboard");
+
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 

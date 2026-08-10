@@ -2,6 +2,16 @@
 
 _Written: 2026-08-09 · Companion to [`marketing-strategy.md`](marketing-strategy.md) §2b · Covers the Week 3 checklist item "write + peer-review … 3 subreddit posts (each native to its sub)"_
 
+> **⚠️ PRICING POSTURE CHANGED 2026-08-10 (issue #14):** Stripe went live
+> ahead of launch, reversing the Aug 6 "launch is free" decision —
+> `CREDITS_ENABLED` is `"true"`, uploads cost credits, and credit packs are
+> purchasable. The drafts below have been updated to the new posture: **"10
+> free uploads to start; earn more by engaging (listen/like/comment), or buy
+> packs from $1.50; early signups get a free-credits code; self-hosting is
+> free and unlimited."** Re-read each draft against the live site before
+> posting, and drop the early-signup coupon code into the FAQ answer when it
+> exists.
+
 Five ready-to-post drafts, the subreddit shortlist they map to, and the schedule. Copy is written
 to the adopted positioning: **"GitHub for songs" appears only in builder subs**; musician subs lead
 with the pain.
@@ -19,7 +29,7 @@ gate remains.
 | 1 | **No terms / privacy / DMCA page.** Strategy assumption #5, confirmed absent. | ✅ Live — `/terms`, `/privacy`, `/dmca` all 200. Two caveats below. | `demoify.app/terms` loads and the DMCA address resolves |
 | 2 | **No OG images / `metadataBase`** — Reddit renders a bare grey card. Strategy 2a #1. | ✅ Live — per-song card verified in production (HTTP 200, `image/png`, ~184 KB) | A song URL unfurls with artwork in Discord |
 | 3 | **No `?ref`/UTM capture** — kills the "signups by source" metric and the Sep 5 retro. | ✅ Live — first-touch capture + signups-by-source in `/admin/analytics` | A signup via `?ref=reddit_musicproduction` shows that source in `/admin/analytics` |
-| 4 | **`CREDITS_ENABLED` unset ⇒ credits were ON in production** — uploads cost 10 credits, so "free right now" was false. | ✅ Pinned `"false"` and deployed | Upload UI shows no credit cost on demoify.app |
+| 4 | **`CREDITS_ENABLED` unset ⇒ credits were ON in production** — uploads cost 10 credits, so "free right now" was false. | ⚠️ **Superseded 2026-08-10:** now deliberately `"true"` — Stripe is live (issue #14) and the copy below says "10 free uploads to start" instead of "free". | Upload UI shows credit cost; buy page works; terms §6 describes credits |
 | 5 | **Launch gate: ≥100 real tracks in Explore by Aug 27**, else slip a week. | ❌ **Not started** — seeding work, not code. The remaining long pole. | Explore shows ≥100 tracks from outside accounts |
 
 `REQUIRE_EMAIL_VERIFICATION` is now `"true"` in production (#13), so unverified accounts are
@@ -110,7 +120,7 @@ Solo dev in Hamilton, New Zealand. Been building this for a while and it's final
 
 Apache 2.0. Source: `github.com/brogan89/demoify` — full Cloudflare/D1/R2/CI walkthrough in `DEPLOYMENT.md`.
 
-Hosted instance at demoify.app is free right now — credits disabled, Stripe off.
+Hosted instance at demoify.app: 10 free uploads to start, then a credit system meters uploads — earn credits free by engaging with other artists' tracks, or packs start at $1.50. Self-hosting skips all of that (uploads free and unlimited on your own storage).
 
 Happy to answer anything about the setup. Running Prisma against a Worker binding and the presigned browser-upload path were the two genuinely annoying parts.
 
@@ -138,7 +148,7 @@ Demoify gives each song one permanent URL. New versions serve from the same link
 
 Next.js 16 on Cloudflare Workers, D1 via Prisma, R2 for audio. Self-hostable against any S3-compatible store, and `CREDITS_ENABLED=false` makes uploads free and unlimited.
 
-Hosted at demoify.app, free right now.
+Hosted at demoify.app — 10 free uploads to start, more earnable free by engaging, credit packs from $1.50 if you're prolific.
 
 Mostly after feedback on one thing: **is the landing page clear about what this actually is within about five seconds?** That's the bit I can't judge anymore.
 
@@ -150,11 +160,11 @@ Do not use "GitHub for songs" in this or any musician sub.
 
 **Title**
 
-> Got tired of sending my band `mix_v3_FINAL_actual.mp3` — so I built a free thing where the link never changes
+> Got tired of sending my band `mix_v3_FINAL_actual.mp3` — so I built a thing where the link never changes
 
 **Body**
 
-I'm a solo dev (and a pretty average guitarist) in Hamilton, New Zealand. Built this to scratch my own itch, it's free, and I'm honestly more after a reality check than signups.
+I'm a solo dev (and a pretty average guitarist) in Hamilton, New Zealand. Built this to scratch my own itch, it's free to try, and I'm honestly more after a reality check than signups.
 
 **The itch.** Every time I sent a mix to someone, the same three things went wrong:
 
@@ -168,7 +178,7 @@ Comments stick to a specific version, and optionally to a specific second of the
 
 Songs can be private (only your band sees them) or public. Bands are a real thing in it — the band owns the handle and the songs, and one login can run several projects.
 
-It's free right now, nothing to pay for, no payment stuff switched on. It's early and it's one person, so expect rough edges.
+Costs: listening is free and needs no account, ever. Uploading starts with 10 free uploads, and you earn more by listening/commenting on other people's tracks — or packs start at $1.50 if you're prolific. It's early and it's one person, so expect rough edges.
 
 The genuinely useful thing for me would be this: **does this solve a problem you actually have, or have you already got a workflow that works?** I'd rather hear "shared Dropbox folder, works fine, don't need this" than nothing at all.
 
@@ -183,11 +193,11 @@ that sub's currency. Deliberately shares no sentences with post C.
 
 **Title**
 
-> Free tool for sending mixes to collaborators — the link doesn't change when you re-bounce
+> Tool for sending mixes to collaborators — the link doesn't change when you re-bounce
 
 **Body**
 
-Solo dev in Hamilton, New Zealand. I made this for myself and it's free — posting because I want to know whether the problem is real for other people or just me.
+Solo dev in Hamilton, New Zealand. I made this for myself and it's free to start — posting because I want to know whether the problem is real for other people or just me.
 
 The thing that kept happening: I'd send a rough mix to whoever I was tracking with, get notes back a few days later, and by then I'd already re-bounced twice. So "the snare is clicky" arrives with no version attached and no timestamp, and I'm sitting there guessing whether they meant Tuesday's take or Thursday's.
 
@@ -197,7 +207,7 @@ The other half is the link. Each song has one permanent URL. Re-bounce, upload, 
 
 Private if you want it private — only the people in your band see it — or public.
 
-Free right now, no payment anything switched on. One person built it, so it's rough in places.
+The person you send a link to never pays or signs up. Uploading: 10 free uploads to start, earn more by engaging with other people's tracks, or packs from $1.50. One person built it, so it's rough in places.
 
 What I'd actually like to know: **how are you handling this at the moment?** If you've got a system that works I want to hear it — half of why I'm posting is to find out whether I've built something nobody needed.
 
@@ -213,17 +223,17 @@ requires self-promo to go in a designated thread before posting at all.**
 
 **Title**
 
-> I built a free tool for sharing works-in-progress — after honest feedback on whether it's actually useful
+> I built a small tool for sharing works-in-progress — after honest feedback on whether it's actually useful
 
 **Body**
 
-Quick note for the mods: this is free, I'm not selling anything, and I'm here for feedback rather than traffic. Happy to take it down if it's the wrong fit.
+Quick note for the mods: anyone you send a link to listens free with no account; uploaders start with 10 free uploads (heavy use is metered by credits). I'm not here to sell anything — I'm here for feedback rather than traffic, and happy to take this down if it's the wrong fit.
 
 I'm a solo developer in Hamilton, New Zealand who plays a bit of guitar. I built a tool for one specific annoyance — sharing a song that isn't finished. You send someone a bounce, they reply days later, and by then the file they heard isn't the file you have.
 
 Briefly, what it does: one permanent link per song. Upload a new version and that same link plays it, with earlier takes kept underneath. Comments attach to a version and optionally a timestamp, so feedback stays pinned to the take it was about. Whoever you send it to doesn't need an account — they press play.
 
-It's free, there's nothing to buy, and it's early enough that you'll find rough edges.
+Starting out is free — 10 uploads, and you earn more just by listening and commenting on other people's tracks. Heavy use is metered by cheap credit packs. It's early enough that you'll find rough edges.
 
 > _Add one honest line here about what launch week actually taught you — e.g. a thing people asked for, or something that broke. Posting a week behind the others is only worth it if you use it._
 
@@ -241,7 +251,7 @@ Answer speed is what the strategy asks for; have these ready.
 |---|---|
 | **"How is this different from a private SoundCloud link?"** | Re-uploading on SoundCloud gives you a new link and no version history — it's a public artist profile pretending to be a collab tool. Here the link is the permanent thing and versions stack behind it. |
 | **"Why not Dropbox / Google Drive?"** | Those are file delivery, not listening: no inline comments, no notion of "the latest version," and the recipient has to download something. |
-| **"Is it free? What's the catch?"** | Free right now, nothing switched on. Longer term there's an optional credit system for uploads on the hosted instance, and self-hosters can switch it off entirely. Nobody's being charged today. *(Depends on blocker #4.)* |
+| **"Is it free? What's the catch?"** | Listening and receiving links: free forever, no account. Uploading: 10 free uploads to start, earn more by engaging with other artists' tracks, or credit packs from $1.50 — that's the whole business model, no ads, no data selling. Early signups get a free-credits code: `<INSERT COUPON CODE>`. Self-hosters switch credits off entirely. |
 | **"Do you claim any rights to my music?"** | **Blocked on #1.** Needs a real link to an own-work-only terms page. Do not post to a music sub before this exists. |
 | **"Can I self-host it?"** | Yes — Apache 2.0, walkthrough in `DEPLOYMENT.md`, and `CREDITS_ENABLED=false` gives free unlimited uploads against your own S3-compatible storage. |
 | **"What happens to my music if you shut down?"** | It's open source and self-hostable, and I'd give notice and an export path. Don't overpromise beyond that. |

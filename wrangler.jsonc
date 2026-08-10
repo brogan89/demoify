@@ -97,13 +97,23 @@
 		// Verify with: npx wrangler secret list | grep RESEND_API_KEY
 		"REQUIRE_EMAIL_VERIFICATION": "true",
 
-		// Credit economy. Unset ⇒ ON (src/lib/credits.ts reads `!== "false"`), so
-		// this must be pinned, not omitted: the Sep 2026 launch is free and the
-		// launch copy says so out loud. "false" makes uploads free and unlimited
-		// and hides all credit UI (balance pill, buy-credits page, cost labels).
-		// Flip to "true" only when Stripe goes live — and update the public copy
-		// in the same deploy, because "free" is load-bearing in the launch posts.
-		"CREDITS_ENABLED": "false"
+		// The MASTER payments switch (issue #14). Unset ⇒ ON (src/lib/credits.ts
+		// reads `!== "false"`), so it stays pinned either way.
+		//
+		// "true" = the credit economy is enforced AND every Stripe surface is
+		// live: credit checkout, tip checkout, Connect onboarding, payouts UI.
+		// "false" = uploads free/unlimited, all credit UI hidden, and all three
+		// payment routes 503 — this is the INSTANT ROLLBACK for payments. The
+		// webhook deliberately ignores this flag so in-flight Checkout sessions
+		// still fulfil after a rollback.
+		//
+		// HARD PRECONDITION for "true": STRIPE_SECRET_KEY (sk_live_…) and
+		// STRIPE_WEBHOOK_SECRET (the LIVE endpoint's whsec_…) must be Worker
+		// secrets first, and the live endpoint smoke-tested. Verify with:
+		// npx wrangler secret list | grep STRIPE
+		// The launch copy said "free" out loud, so the terms page + launch posts
+		// must change in the same deploy as this flag (PR B does both).
+		"CREDITS_ENABLED": "true"
 	},
 
 	// --- Cron triggers for periodic analytics aggregation ---
@@ -127,8 +137,11 @@
 	// Named environments do NOT inherit bindings, so mirror what dev needs.
 	"env": {
 		"remote": {
-			// Mirrored from the top level so `dev:remote` renders the same
-			// credit-free UI production serves.
+			// DELIBERATELY different from the top level: production runs
+			// CREDITS_ENABLED="true", but dev:remote is read-only against the
+			// live D1 (src/lib/db.ts guard), so payment UI there could only
+			// dead-end — checkout POSTs would throw on the first write. Keeping
+			// it "false" hides every payment surface in this mode.
 			"vars": {
 				"BETTER_AUTH_URL": "http://localhost:3000",
 				"CREDITS_ENABLED": "false"

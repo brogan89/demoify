@@ -11,6 +11,7 @@ import {
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { GENRES } from "@/lib/genres";
+import { creditsEnabled } from "@/lib/credits";
 import { WAVEFORM_BARS, parsePeaksJson } from "@/lib/waveform";
 import { Button } from "@/components/ui/button";
 import { WaveformBars } from "@/components/waveform";
@@ -311,36 +312,41 @@ export default async function Home() {
 
       {/* Support + self-hosting */}
       <section id="support" className="mx-auto max-w-5xl px-4 pt-16 md:pt-20">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <Reveal className="h-full">
-            {/* The page's one gradient-border card — the 💜 is literally on-brand now. */}
-            <div className="h-full rounded-xl bg-brand-gradient p-px shadow-glow-sm">
-              <div className="flex h-full flex-col items-center rounded-[calc(var(--radius)*1.4-1px)] bg-card p-8 text-center">
-                <HandCoins className="mb-3 size-6 text-primary" />
-                <h2 className="font-heading text-xl font-semibold">
-                  Support your favorite artists
-                </h2>
-                <p className="mx-auto mt-2 max-w-prose text-sm text-muted-foreground">
-                  Love a track? Send the artist a tip.{" "}
-                  <strong className="text-foreground">
-                    90% goes straight to the artist
-                  </strong>{" "}
-                  and 10% keeps Demoify running — so a thank-you to them is a
-                  thank-you to us too. 💜
-                </p>
-                <div className="mt-5 flex flex-1 items-end">
-                  <Button
-                    asChild
-                    size="lg"
-                    className="bg-brand-gradient text-white hover:opacity-90"
-                  >
-                    <Link href="/explore">Find an artist to support</Link>
-                  </Button>
+        <div className={`grid grid-cols-1 gap-6 ${creditsEnabled() ? "lg:grid-cols-2" : ""}`}>
+          {/* Tipping runs through Stripe, which the CREDITS_ENABLED master
+              switch gates — no point advertising it when the Tip button
+              doesn't render anywhere. */}
+          {creditsEnabled() && (
+            <Reveal className="h-full">
+              {/* The page's one gradient-border card — the 💜 is literally on-brand now. */}
+              <div className="h-full rounded-xl bg-brand-gradient p-px shadow-glow-sm">
+                <div className="flex h-full flex-col items-center rounded-[calc(var(--radius)*1.4-1px)] bg-card p-8 text-center">
+                  <HandCoins className="mb-3 size-6 text-primary" />
+                  <h2 className="font-heading text-xl font-semibold">
+                    Support your favorite artists
+                  </h2>
+                  <p className="mx-auto mt-2 max-w-prose text-sm text-muted-foreground">
+                    Love a track? Send the artist a tip.{" "}
+                    <strong className="text-foreground">
+                      90% goes straight to the artist
+                    </strong>{" "}
+                    and 10% keeps Demoify running — so a thank-you to them is a
+                    thank-you to us too. 💜
+                  </p>
+                  <div className="mt-5 flex flex-1 items-end">
+                    <Button
+                      asChild
+                      size="lg"
+                      className="bg-brand-gradient text-white hover:opacity-90"
+                    >
+                      <Link href="/explore">Find an artist to support</Link>
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          </Reveal>
-          <Reveal delay={100} className="h-full">
+            </Reveal>
+          )}
+          <Reveal delay={creditsEnabled() ? 100 : 0} className="h-full">
             <div className="flex h-full flex-col items-center rounded-xl border bg-card/50 p-8 text-center">
               <Server className="mb-3 size-6 text-primary" />
               <h2 className="font-heading text-xl font-semibold">
@@ -349,7 +355,8 @@ export default async function Home() {
               <p className="mx-auto mt-2 max-w-prose text-sm text-muted-foreground">
                 Demoify is open source — you can host it yourself. Bring your
                 own storage and switch off upload credits entirely, so uploads
-                are <strong className="text-foreground">free and unlimited</strong>.
+                on your instance are{" "}
+                <strong className="text-foreground">free and unlimited</strong>.
                 You can even federate your public tracks into this shared
                 Explore feed.
               </p>
