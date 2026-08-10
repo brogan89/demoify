@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import Stripe from "stripe";
 import { prisma } from "@/lib/db";
 import { requireVerifiedUser, gateResponse } from "@/lib/session";
 import { getMembership, isMember } from "@/lib/band";
@@ -60,34 +61,55 @@ export async function POST(req: Request) {
   // Only return to in-app paths to avoid open-redirects via the success URL.
   const safeReturn = returnPath && returnPath.startsWith("/") ? returnPath : "/explore";
 
-  const session = await stripe().checkout.sessions.create({
-    mode: "payment",
-    success_url: `${appUrl()}${safeReturn}?tip=success`,
-    cancel_url: `${appUrl()}${safeReturn}?tip=cancelled`,
-    line_items: [
+  let session: Stripe.Checkout.Session;
+  try {
+    session = await stripe().checkout.sessions.create(
       {
-        quantity: 1,
-        price_data: {
-          currency: "usd",
-          unit_amount: amountCents,
-          product_data: { name: `Tip for ${band.displayName}` },
+        mode: "payment",
+        success_url: `${appUrl()}${safeReturn}?tip=success`,
+        cancel_url: `${appUrl()}${safeReturn}?tip=cancelled`,
+        line_items: [
+          {
+            quantity: 1,
+            price_data: {
+              currency: "usd",
+              unit_amount: amountCents,
+              product_data: { name: `Tip for ${band.displayName}` },
+            },
+          },
+        ],
+        payment_intent_data: {
+          application_fee_amount: feeCents,
+          transfer_data: { destination: band.stripeAccountId },
+        },
+        metadata: {
+          kind: "tip",
+          bandId: band.id,
+          tipperUserId: user.id,
+          projectId: projectId ?? "",
+          amountCents: String(amountCents),
+          feeCents: String(feeCents),
+          artistCents: String(artistCents),
         },
       },
-    ],
-    payment_intent_data: {
-      application_fee_amount: feeCents,
-      transfer_data: { destination: band.stripeAccountId },
-    },
-    metadata: {
-      kind: "tip",
-      bandId: band.id,
-      tipperUserId: user.id,
-      projectId: projectId ?? "",
-      amountCents: String(amountCents),
-      feeCents: String(feeCents),
-      artistCents: String(artistCents),
-    },
-  });
+      {
+        // Application-level dedupe (double-click). safeReturn is part of the
+        // key on purpose: the same tip started from a song page vs. a profile
+        // page differs only in success_url, and identical keys with different
+        // params are an idempotency_error from Stripe.
+        idempotencyKey: `tip:${band.id}:${user.id}:${amountCents}:${safeReturn}:${Math.floor(Date.now() / 60000)}`,
+      },
+    );
+  } catch (err) {
+    if (err instanceof Stripe.errors.StripeInvalidRequestError) {
+      console.error("[tips/checkout] Stripe rejected session create", err.message);
+      return NextResponse.json(
+        { error: "The tip could not be started. Please try again." },
+        { status: 400 },
+      );
+    }
+    throw err;
+  }
 
   return NextResponse.json({ url: session.url });
 }

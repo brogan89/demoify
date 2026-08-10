@@ -7,10 +7,14 @@ import {
   NEW_ARTIST_CREDITS,
   PLAY_CREDIT_SECONDS,
   STARTING_CREDITS,
+  STRIPE_MIN_CHARGE_CENTS,
   UPLOAD_COST,
   creditsEnabled,
+  discountedPriceCents,
   formatUsd,
   getPackage,
+  isChargeable,
+  packagesUsableWith,
   uploadsRemaining,
 } from "./credits";
 
@@ -122,5 +126,68 @@ describe("credit economics", () => {
   it("has unique package ids, since getPackage resolves by id", () => {
     const ids = CREDIT_PACKAGES.map((p) => p.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
+// This is real money: discountedPriceCents is both the buy-page preview AND
+// the unit_amount Stripe charges, and isChargeable is the only thing standing
+// between a deep discount coupon and a sub-$0.50 session Stripe hard-rejects.
+describe("discountedPriceCents", () => {
+  it("takes a percentage off, rounding to the nearest cent", () => {
+    expect(discountedPriceCents("PERCENT_OFF", 50, 150)).toBe(75);
+    expect(discountedPriceCents("PERCENT_OFF", 33, 150)).toBe(100); // 49.5 rounds to 50 off
+    expect(discountedPriceCents("PERCENT_OFF", 10, 1500)).toBe(1350);
+  });
+
+  it("takes a fixed amount off, clamped at zero", () => {
+    expect(discountedPriceCents("FIXED_OFF", 200, 150)).toBe(0);
+    expect(discountedPriceCents("FIXED_OFF", 100, 150)).toBe(50);
+    expect(discountedPriceCents("FIXED_OFF", 1450, 1500)).toBe(50);
+  });
+
+  it("matches the identical math previously duplicated in the checkout route", () => {
+    // Old route formula: Math.max(0, price - Math.round(price * amount / 100))
+    for (const pack of CREDIT_PACKAGES) {
+      for (const pct of [1, 25, 50, 96, 99]) {
+        const legacy = Math.max(0, pack.priceCents - Math.round((pack.priceCents * pct) / 100));
+        expect(discountedPriceCents("PERCENT_OFF", pct, pack.priceCents)).toBe(legacy);
+      }
+    }
+  });
+});
+
+describe("isChargeable", () => {
+  it("is the $0.50 Stripe minimum, boundary-exact", () => {
+    expect(STRIPE_MIN_CHARGE_CENTS).toBe(50);
+    expect(isChargeable(49)).toBe(false);
+    expect(isChargeable(50)).toBe(true);
+    expect(isChargeable(0)).toBe(false);
+  });
+});
+
+describe("packagesUsableWith", () => {
+  it("PERCENT_OFF 70 excludes Starter (45¢) but keeps Creator and Studio", () => {
+    const ids = packagesUsableWith("PERCENT_OFF", 70).map((p) => p.id);
+    expect(ids).toEqual(["creator", "studio"]);
+  });
+
+  // Boundary against the current package table: 96% leaves Studio at 60¢
+  // (usable); 97% leaves it at 45¢ (nothing usable).
+  it("PERCENT_OFF boundary sits between 96 and 97", () => {
+    expect(packagesUsableWith("PERCENT_OFF", 96).map((p) => p.id)).toEqual(["studio"]);
+    expect(packagesUsableWith("PERCENT_OFF", 97)).toEqual([]);
+  });
+
+  it("PERCENT_OFF 100 is usable nowhere — that's what FREE_CREDITS is for", () => {
+    expect(packagesUsableWith("PERCENT_OFF", 100)).toEqual([]);
+  });
+
+  it("FIXED_OFF boundary sits between 1450 and 1451 against Studio", () => {
+    expect(packagesUsableWith("FIXED_OFF", 1450).map((p) => p.id)).toEqual(["studio"]);
+    expect(packagesUsableWith("FIXED_OFF", 1451)).toEqual([]);
+  });
+
+  it("a small discount applies everywhere", () => {
+    expect(packagesUsableWith("PERCENT_OFF", 10)).toHaveLength(CREDIT_PACKAGES.length);
   });
 });

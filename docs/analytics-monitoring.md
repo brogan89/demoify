@@ -46,9 +46,11 @@ A server-rendered admin page available to users listed in `ADMIN_EMAILS`.
 - `tip` table tracks all tips with platform fee
 - Dashboard aggregates these directly
 
-**Stripe API integration (for reconciliation):**
-- `src/lib/stripe-analytics.ts` — queries Stripe for charges, transfers, balances
-- Used for month-end reconciliation and audit
+**Stripe reconciliation:**
+- Compare the local ledger against the Stripe Dashboard directly
+  (dashboard.stripe.com) — purchases carry `stripeSessionId` and
+  `amountPaidCents` on their `credit_transaction` rows, tips carry
+  `stripeSessionId` on `tip` rows, so both sides join cleanly.
 
 ## Deployment
 

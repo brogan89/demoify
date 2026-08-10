@@ -114,11 +114,18 @@ model Band {
   // Credits balance. New bands start with enough for 10 free uploads (STARTING_CREDITS).
   credits     Int      @default(100)
   // Stripe Connect (Express) account that receives tips for this artist. Null
-  // until the band sets up payouts. `payoutsEnabled` caches whether that account
-  // can actually receive money (charges + payouts enabled), refreshed by the
-  // Stripe `account.updated` webhook so we don't hit the API on every page.
-  stripeAccountId String?
-  payoutsEnabled  Boolean @default(false)
+  // until the band sets up payouts. Unique: two bands must never share one
+  // account, because the `account.updated` webhook updates by stripeAccountId.
+  // (SQLite treats NULLs as distinct, so un-onboarded bands are unaffected.)
+  // `payoutsEnabled` caches whether that account can actually receive money
+  // (charges + payouts enabled), refreshed by the Stripe `account.updated`
+  // webhook so we don't hit the API on every page. `payoutsSyncedAt` is the
+  // `created` timestamp of the last applied account.updated event — the
+  // webhook only applies events newer than it, so a retried older event
+  // can't flip payouts backwards.
+  stripeAccountId String?   @unique
+  payoutsEnabled  Boolean   @default(false)
+  payoutsSyncedAt DateTime?
   createdAt   DateTime @default(now())
 
   memberships       BandMembership[]
@@ -209,6 +216,11 @@ model CreditTransaction {
   delta           Int // positive = added, negative = spent
   reason          String // "upload" | "purchase" | "like" | "comment" | "play" | "coupon" | "gift" | "artist_grant"
   stripeSessionId String?  @unique
+  // "purchase" rows only: what the buyer actually paid (Stripe's
+  // session.amount_total), which diverges from `delta` when a discount coupon
+  // was applied. Revenue reporting must sum this, not delta — 1 credit = 1¢
+  // only holds at full price. Null for non-purchase rows and pre-0019 rows.
+  amountPaidCents Int?
   // Engagement grants only: the user who engaged and the song (projectId) they
   // engaged with. Null for upload/purchase rows. The unique constraint caps each
   // engager to one reward per song per action.

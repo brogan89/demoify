@@ -29,8 +29,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # No `npx prisma generate` step: none of the units under test reach
-      # @/generated/prisma/client. Add one here the day a test mocks the DB.
+      # Matches deploy.yml — keeps the trap closed for any future test that
+      # imports a module reaching @/generated/prisma/client.
+      - name: Generate Prisma client
+        run: npx prisma generate
+
       - name: Run unit tests
         run: npm test
 

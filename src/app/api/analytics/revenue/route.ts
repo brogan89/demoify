@@ -1,5 +1,5 @@
 /**
- * Revenue analytics endpoint.
+ * Revenue analytics endpoint. ADMIN-ONLY — this returns platform revenue.
  *
  * Aggregates Stripe and platform revenue data for the analytics dashboard.
  * This queries our own D1 records (credit transactions + tips) as the source
@@ -10,6 +10,7 @@
  */
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { isCurrentUserAdmin } from "@/lib/admin";
 
 export type RevenueData = {
   totalRevenueCents: number;
@@ -29,8 +30,24 @@ function fmtDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+// A "purchase" ledger row: delta = credits granted; amountPaidCents = what the
+// buyer actually paid (null for pre-0019 rows, where full price at 1cr=1¢
+// makes delta the correct fallback).
+type PurchaseRow = { delta: number; amountPaidCents: number | null; createdAt: Date };
+
+function paidCents(p: PurchaseRow): number {
+  return p.amountPaidCents ?? p.delta;
+}
+
 export async function GET(request: Request) {
   try {
+    // 404, not 403: an unauthenticated probe shouldn't learn the endpoint
+    // exists. Same gate as /admin/analytics (isCurrentUserAdmin requires a
+    // verified email).
+    if (!(await isCurrentUserAdmin())) {
+      return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
+    }
+
     const url = new URL(request.url);
     const days = Math.min(Math.max(parseInt(url.searchParams.get("days") ?? "90", 10) || 90, 1), 365);
     const since = new Date(Date.now() - days * 86400_000);
@@ -39,7 +56,7 @@ export async function GET(request: Request) {
       // Recent credit purchases
       prisma.creditTransaction.findMany({
         where: { reason: "purchase", createdAt: { gte: since } },
-        select: { delta: true, createdAt: true },
+        select: { delta: true, amountPaidCents: true, createdAt: true },
         orderBy: { createdAt: "asc" },
       }),
       // Recent tips
@@ -51,12 +68,14 @@ export async function GET(request: Request) {
       // All-time purchases for package breakdown
       prisma.creditTransaction.findMany({
         where: { reason: "purchase" },
-        select: { delta: true, createdAt: true },
+        select: { delta: true, amountPaidCents: true, createdAt: true },
       }),
     ]);
 
     // --- Totals ---
-    const creditRevenueCents = purchases.reduce((s: number, p: { delta: number }) => s + p.delta, 0);
+    // Sum what buyers PAID, not credits granted — they diverge on every
+    // coupon-discounted purchase.
+    const creditRevenueCents = purchases.reduce((s: number, p: PurchaseRow) => s + paidCents(p), 0);
     const tipPlatformFeesCents = tips.reduce((s: number, t: { feeCents: number }) => s + t.feeCents, 0);
     const tipGrossCents = tips.reduce((s: number, t: { amountCents: number }) => s + t.amountCents, 0);
     const totalRevenueCents = creditRevenueCents + tipPlatformFeesCents;
@@ -74,7 +93,7 @@ export async function GET(request: Request) {
     for (const p of purchases) {
       const key = fmtDate(p.createdAt);
       const bucket = dayBuckets.get(key);
-      if (bucket) bucket.credits += p.delta;
+      if (bucket) bucket.credits += paidCents(p);
     }
 
     for (const t of tips) {
@@ -89,7 +108,7 @@ export async function GET(request: Request) {
     });
 
     // --- Package breakdown (approximate — grouped by credit amount) ---
-    const packageCounts = new Map<string, { count: number; credits: number }>();
+    const packageCounts = new Map<string, { count: number; credits: number; revenue: number }>();
     for (const p of allPurchases) {
       // Map delta to known package sizes
       let label = `${p.delta} credits`;
@@ -98,9 +117,10 @@ export async function GET(request: Request) {
       else if (p.delta === 1500) label = "Studio ($15.00)";
       else if (p.delta > 1500) label = "Bulk";
 
-      const entry = packageCounts.get(label) ?? { count: 0, credits: 0 };
+      const entry = packageCounts.get(label) ?? { count: 0, credits: 0, revenue: 0 };
       entry.count++;
       entry.credits += p.delta;
+      entry.revenue += paidCents(p); // actual cents paid, not credits granted
       packageCounts.set(label, entry);
     }
 
@@ -110,7 +130,7 @@ export async function GET(request: Request) {
         label,
         count: data.count,
         credits: data.credits,
-        revenue: data.credits, // 1 credit = 1 cent
+        revenue: data.revenue,
       }))
       .sort((a, b) => b.revenue - a.revenue);
 

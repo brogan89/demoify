@@ -5,7 +5,12 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser, requireVerifiedUser } from "@/lib/session";
 import { getActiveBand } from "@/lib/band";
 import { isCurrentUserAdmin } from "@/lib/admin";
-import { creditsEnabled } from "@/lib/credits";
+import {
+  creditsEnabled,
+  formatUsd,
+  packagesUsableWith,
+  STRIPE_MIN_CHARGE_CENTS,
+} from "@/lib/credits";
 
 type CouponKind = "FREE_CREDITS" | "PERCENT_OFF" | "FIXED_OFF";
 const KINDS: CouponKind[] = ["FREE_CREDITS", "PERCENT_OFF", "FIXED_OFF"];
@@ -98,7 +103,18 @@ export async function redeemCoupon(
 export async function validateCoupon(
   code: string,
 ): Promise<
-  | { ok: true; kind: "PERCENT_OFF" | "FIXED_OFF"; amount: number; code: string }
+  | {
+      ok: true;
+      kind: "PERCENT_OFF" | "FIXED_OFF";
+      amount: number;
+      code: string;
+      /**
+       * Packages this discount can actually be applied to — those whose
+       * discounted price still clears Stripe's $0.50 minimum. The buy page
+       * disables the rest.
+       */
+      usablePackageIds: string[];
+    }
   | { error: string }
 > {
   if (!creditsEnabled()) return { error: "The credit economy is disabled on this instance." };
@@ -129,17 +145,36 @@ export async function validateCoupon(
   });
   if (alreadyUsed) return { error: "You've already used this code" };
 
+  const kind = coupon.kind as "PERCENT_OFF" | "FIXED_OFF";
+  // Pre-0.50-minimum coupons may exist that no package can absorb; better to
+  // say so here than to 400 at checkout.
+  const usable = packagesUsableWith(kind, coupon.amount);
+  if (usable.length === 0) {
+    return {
+      error: `This code's discount drops every package below Stripe's ${formatUsd(
+        STRIPE_MIN_CHARGE_CENTS,
+      )} minimum charge, so it can't be used. Contact us for a replacement.`,
+    };
+  }
+
   return {
     ok: true,
-    kind: coupon.kind as "PERCENT_OFF" | "FIXED_OFF",
+    kind,
     amount: coupon.amount,
     code: coupon.code,
+    usablePackageIds: usable.map((p) => p.id),
   };
 }
 
 export type ApplyCouponResult =
   | { ok: true; kind: "FREE_CREDITS"; credits: number }
-  | { ok: true; kind: "PERCENT_OFF" | "FIXED_OFF"; amount: number; code: string }
+  | {
+      ok: true;
+      kind: "PERCENT_OFF" | "FIXED_OFF";
+      amount: number;
+      code: string;
+      usablePackageIds: string[];
+    }
   | { error: string };
 
 /**
@@ -176,6 +211,23 @@ export async function createCoupon(input: {
   }
   if (input.kind === "PERCENT_OFF" && input.amount > 100) {
     return { error: "Percent off can't exceed 100" };
+  }
+  // Discount coupons must leave at least one package chargeable: Stripe
+  // rejects any session under STRIPE_MIN_CHARGE_CENTS ($0.50), including
+  // $0.00. 100%-off is what FREE_CREDITS is for — it grants credits directly
+  // and never touches Stripe.
+  if (input.kind === "PERCENT_OFF" && input.amount === 100) {
+    return {
+      error:
+        "A 100% discount can't be charged through Stripe. Issue a Free credits coupon instead — 150 credits matches the Starter pack.",
+    };
+  }
+  if (input.kind !== "FREE_CREDITS" && packagesUsableWith(input.kind, input.amount).length === 0) {
+    return {
+      error: `No package's discounted price would clear Stripe's ${formatUsd(
+        STRIPE_MIN_CHARGE_CENTS,
+      )} minimum charge. Lower the discount, or issue a Free credits coupon instead.`,
+    };
   }
   if (
     input.maxRedemptions !== undefined &&

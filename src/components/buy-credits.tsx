@@ -15,10 +15,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatUsd, type CreditPackage } from "@/lib/credits";
+import { formatUsd, discountedPriceCents, type CreditPackage } from "@/lib/credits";
 import { applyCoupon } from "@/app/actions/coupons";
 
-type AppliedDiscount = { code: string; kind: "PERCENT_OFF" | "FIXED_OFF"; amount: number };
+type AppliedDiscount = {
+  code: string;
+  kind: "PERCENT_OFF" | "FIXED_OFF";
+  amount: number;
+  // Packages whose discounted price clears Stripe's $0.50 minimum — the rest
+  // are sold at full price with the code omitted (server enforces the same).
+  usablePackageIds: string[];
+};
 
 export function BuyCredits({
   packages,
@@ -62,7 +69,12 @@ export function BuyCredits({
         setCouponInput("");
         router.refresh();
       } else {
-        setAppliedDiscount({ code: result.code, kind: result.kind, amount: result.amount });
+        setAppliedDiscount({
+          code: result.code,
+          kind: result.kind,
+          amount: result.amount,
+          usablePackageIds: result.usablePackageIds,
+        });
         toast.success("Discount applied — pick a package below");
       }
     } finally {
@@ -70,13 +82,17 @@ export function BuyCredits({
     }
   }
 
-  function discountedPrice(priceCents: number): number {
-    if (!appliedDiscount) return priceCents;
-    const off =
-      appliedDiscount.kind === "PERCENT_OFF"
-        ? Math.round((priceCents * appliedDiscount.amount) / 100)
-        : appliedDiscount.amount;
-    return Math.max(0, priceCents - off);
+  // True when the applied code can be used on this package (discounted total
+  // clears Stripe's minimum). No code applied = trivially "usable" at list price.
+  function couponUsableOn(packageId: string): boolean {
+    return !appliedDiscount || appliedDiscount.usablePackageIds.includes(packageId);
+  }
+
+  // Same implementation as the server (src/lib/credits.ts) so the previewed
+  // price and the charged price can't drift.
+  function discountedPrice(p: CreditPackage): number {
+    if (!appliedDiscount || !couponUsableOn(p.id)) return p.priceCents;
+    return discountedPriceCents(appliedDiscount.kind, appliedDiscount.amount, p.priceCents);
   }
 
   async function buy(packageId: string) {
@@ -93,7 +109,11 @@ export function BuyCredits({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           packageId,
-          ...(appliedDiscount ? { couponCode: appliedDiscount.code } : {}),
+          // Only send the code where it actually applies — sending it for an
+          // ineligible pack would 400 at the server's minimum-charge check.
+          ...(appliedDiscount && couponUsableOn(packageId)
+            ? { couponCode: appliedDiscount.code }
+            : {}),
         }),
       });
       const data = (await res.json()) as { url?: string; error?: string };
@@ -139,8 +159,9 @@ export function BuyCredits({
 
       <div className="grid gap-4 sm:grid-cols-3">
         {packages.map((p) => {
-          const finalPrice = discountedPrice(p.priceCents);
+          const finalPrice = discountedPrice(p);
           const discounted = finalPrice !== p.priceCents;
+          const codeExcluded = appliedDiscount !== null && !couponUsableOn(p.id);
           return (
             <Card key={p.id}>
               <CardHeader>
@@ -166,6 +187,12 @@ export function BuyCredits({
                     `Buy · ${formatUsd(p.priceCents)}`
                   )}
                 </Button>
+                {codeExcluded && (
+                  <p className="text-xs text-muted-foreground">
+                    Code doesn&rsquo;t apply — the discounted price would be under
+                    Stripe&rsquo;s $0.50 minimum.
+                  </p>
+                )}
               </CardContent>
             </Card>
           );

@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
+import Stripe from "stripe";
 import { requireVerifiedUser, gateResponse } from "@/lib/session";
 import { getActiveBand } from "@/lib/band";
 import { isStripeConfigured, stripe, appUrl } from "@/lib/stripe";
-import { getPackage, creditsEnabled } from "@/lib/credits";
+import {
+  getPackage,
+  creditsEnabled,
+  discountedPriceCents,
+  isChargeable,
+  formatUsd,
+  STRIPE_MIN_CHARGE_CENTS,
+  type DiscountKind,
+} from "@/lib/credits";
 import { prisma } from "@/lib/db";
 
 export async function POST(req: Request) {
@@ -58,40 +67,80 @@ export async function POST(req: Request) {
         where: { couponId: coupon.id, OR: [{ bandId: active.band.id }, { userId: user.id }] },
       });
       if (!alreadyUsed) {
+        // Shared with the buy page's preview (discountedPriceCents) so the
+        // charged price can never drift from the displayed one.
+        const discounted = discountedPriceCents(
+          coupon.kind as DiscountKind,
+          coupon.amount,
+          pack.priceCents,
+        );
+        // Stripe rejects charges under $0.50 — a deep discount on a small
+        // pack lands here. 400 (not the silent-ignore above): the buyer is
+        // looking at a discounted price, so silently charging full price
+        // would be worse than an error.
+        if (!isChargeable(discounted)) {
+          return NextResponse.json(
+            {
+              error: `This code can't be applied to the ${pack.label} pack — the discounted total would be below Stripe's ${formatUsd(
+                STRIPE_MIN_CHARGE_CENTS,
+              )} minimum. Try a larger pack.`,
+            },
+            { status: 400 },
+          );
+        }
         couponId = coupon.id;
-        const discountCents =
-          coupon.kind === "PERCENT_OFF"
-            ? Math.round((pack.priceCents * coupon.amount) / 100)
-            : coupon.amount;
-        unitAmount = Math.max(0, pack.priceCents - discountCents);
+        unitAmount = discounted;
       }
     }
   }
 
-  const session = await stripe().checkout.sessions.create({
-    mode: "payment",
-    success_url: `${appUrl()}/dashboard/credits?purchase=success`,
-    cancel_url: `${appUrl()}/dashboard/credits?purchase=cancelled`,
-    client_reference_id: active.band.id,
-    metadata: {
-      bandId: active.band.id,
-      packageId: pack.id,
-      credits: String(pack.credits),
-      // userId travels with couponId so the webhook can record who redeemed
-      // it (no session context there) — see CouponRedemption's per-user guard.
-      ...(couponId ? { couponId, userId: user.id } : {}),
-    },
-    line_items: [
+  let session: Stripe.Checkout.Session;
+  try {
+    session = await stripe().checkout.sessions.create(
       {
-        quantity: 1,
-        price_data: {
-          currency: "usd",
-          unit_amount: unitAmount,
-          product_data: { name: `${pack.credits} Demoify credits (${pack.label})` },
+        mode: "payment",
+        success_url: `${appUrl()}/dashboard/credits?purchase=success`,
+        cancel_url: `${appUrl()}/dashboard/credits?purchase=cancelled`,
+        client_reference_id: active.band.id,
+        metadata: {
+          bandId: active.band.id,
+          packageId: pack.id,
+          credits: String(pack.credits),
+          // userId travels with couponId so the webhook can record who redeemed
+          // it (no session context there) — see CouponRedemption's per-user guard.
+          ...(couponId ? { couponId, userId: user.id } : {}),
         },
+        line_items: [
+          {
+            quantity: 1,
+            price_data: {
+              currency: "usd",
+              unit_amount: unitAmount,
+              product_data: { name: `${pack.credits} Demoify credits (${pack.label})` },
+            },
+          },
+        ],
       },
-    ],
-  });
+      {
+        // Application-level dedupe (double-click, two tabs): identical
+        // requests within the same minute reuse one Checkout session, while a
+        // deliberate second purchase a minute later gets a fresh one.
+        // (stripe-node handles its own network-retry idempotency.)
+        idempotencyKey: `credits:${active.band.id}:${user.id}:${pack.id}:${couponId ?? "none"}:${Math.floor(Date.now() / 60000)}`,
+      },
+    );
+  } catch (err) {
+    // Stripe rejecting the session (bad params, amount edge cases) is a 400
+    // we should own, not an unhandled 500.
+    if (err instanceof Stripe.errors.StripeInvalidRequestError) {
+      console.error("[credits/checkout] Stripe rejected session create", err.message);
+      return NextResponse.json(
+        { error: "Payment could not be started. Please try again." },
+        { status: 400 },
+      );
+    }
+    throw err;
+  }
 
   return NextResponse.json({ url: session.url });
 }

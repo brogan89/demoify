@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import Stripe from "stripe";
 import { prisma } from "@/lib/db";
 import { requireVerifiedUser, gateResponse } from "@/lib/session";
 import { getActiveBand } from "@/lib/band";
@@ -32,17 +33,55 @@ export async function POST() {
 
   let accountId = band.stripeAccountId;
   if (!accountId) {
-    const account = await stripe().accounts.create({
-      type: "express",
-      metadata: { bandId: band.id },
+    // Three layers against the create-account race (double-click, two tabs):
+    // 1. The idempotency key — concurrent identical requests get ONE Stripe
+    //    account back, so no orphan account is ever created. No time bucket:
+    //    the key should hold for the whole un-onboarded window (Stripe keys
+    //    live 24h, ample for a retry storm).
+    // 2. The conditional claim below — only the first writer sets the id;
+    //    a loser re-reads and uses the stored one.
+    // 3. The unique index on band.stripeAccountId (migration 0019).
+    let account: Stripe.Account;
+    try {
+      account = await stripe().accounts.create(
+        {
+          type: "express",
+          metadata: { bandId: band.id },
+        },
+        { idempotencyKey: `connect-account:${band.id}` },
+      );
+    } catch (err) {
+      if (err instanceof Stripe.errors.StripeInvalidRequestError) {
+        console.error("[connect/onboard] Stripe rejected account create", err.message);
+        return NextResponse.json(
+          { error: "Payout setup could not be started. Please try again." },
+          { status: 400 },
+        );
+      }
+      throw err;
+    }
+    // Claim the slot only if still empty — check-then-act is racy on its own.
+    const claimed = await prisma.band.updateMany({
+      where: { id: band.id, stripeAccountId: null },
+      data: { stripeAccountId: account.id },
     });
-    accountId = account.id;
-    await prisma.band.update({
-      where: { id: band.id },
-      data: { stripeAccountId: accountId },
-    });
+    if (claimed.count === 0) {
+      // Lost the race — another request already stored an id. Use that one.
+      // (With the idempotency key both requests usually hold the SAME id
+      // anyway; this handles the general case.)
+      const current = await prisma.band.findUnique({
+        where: { id: band.id },
+        select: { stripeAccountId: true },
+      });
+      accountId = current?.stripeAccountId ?? account.id;
+    } else {
+      accountId = account.id;
+    }
   }
 
+  // No idempotency key here, deliberately: account links are single-use and
+  // expire in minutes. Reusing a key within Stripe's 24h replay window would
+  // hand back a dead link and the artist could never finish onboarding.
   const link = await stripe().accountLinks.create({
     account: accountId,
     type: "account_onboarding",
